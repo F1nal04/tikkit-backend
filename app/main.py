@@ -1,0 +1,123 @@
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from uuid import UUID
+import models
+import schemas
+import database
+
+# Create the database tables
+models.Base.metadata.create_all(bind=database.engine)
+
+app = FastAPI(
+    title="Ticket System API",
+    description="A REST API for managing IT support tickets",
+    version="1.0.0",
+    openapi_tags=[
+        {
+            "name": "ticket",
+            "description": "Operations with a single ticket. The **ticket** endpoint allows you to create, read, update and delete a ticket.",
+        },
+        {
+            "name": "tickets",
+            "description": "Operations with multiple tickets. The **tickets** endpoint allows you to read all tickets.",
+        }
+    ]
+)
+
+
+@app.post("/ticket", tags=["ticket"], response_model=schemas.TicketPublic)
+def create_ticket(ticket: schemas.TicketCreate, db: Session = Depends(database.get_db)):
+    db_ticket = models.Ticket(**ticket.model_dump())
+    db.add(db_ticket)
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+
+@app.get("/ticket/{ticket_id}", tags=["ticket"], response_model=schemas.TicketPublic)
+def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return db_ticket
+
+
+@app.put("/ticket/{ticket_id}", tags=["ticket"], response_model=schemas.TicketPublic)
+def update_ticket(ticket_id: UUID, ticket: schemas.TicketUpdate, db: Session = Depends(database.get_db)):
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    update_data = ticket.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_ticket, field, value)
+
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+
+@app.delete("/ticket/{ticket_id}", tags=["ticket"])
+def delete_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    db.delete(db_ticket)
+    db.commit()
+    return {"message": "Ticket deleted successfully"}
+
+
+@app.put("/ticket/assign", tags=["ticket"], response_model=schemas.TicketPublic)
+def assign_ticket(ticket_id: UUID, assigned_to: UUID, db: Session = Depends(database.get_db)):
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    db_ticket.assigned_to = assigned_to
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+
+@app.put("/ticket/status", tags=["ticket"], response_model=schemas.TicketPublic)
+def update_ticket_status(ticket_id: UUID, status: schemas.Status, db: Session = Depends(database.get_db)):
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    db_ticket.status = status
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+
+@app.put("/ticket/priority", tags=["ticket"], response_model=schemas.TicketPublic)
+def update_ticket_priority(ticket_id: UUID, priority: schemas.Priority, db: Session = Depends(database.get_db)):
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    db_ticket.priority = priority
+    db.commit()
+    db.refresh(db_ticket)
+    return db_ticket
+
+
+@app.get("/tickets", tags=["tickets"], response_model=list[schemas.TicketPublic])
+def read_tickets(skip: int = 0, limit: int = 100, status: schemas.Status = None, priority: schemas.Priority = None, assigned_to: UUID = None, author: UUID = None, topic: schemas.Topic = None,  db: Session = Depends(database.get_db)):
+    tickets = db.query(models.Ticket).order_by(
+        models.Ticket.created_at.desc()).offset(skip).limit(limit).all()
+    if status:
+        tickets = [ticket for ticket in tickets if ticket.status == status]
+    if priority:
+        tickets = [ticket for ticket in tickets if ticket.priority == priority]
+    if assigned_to:
+        tickets = [
+            ticket for ticket in tickets if ticket.assigned_to == assigned_to]
+    if author:
+        tickets = [ticket for ticket in tickets if ticket.author == author]
+    if topic:
+        tickets = [ticket for ticket in tickets if ticket.topic == topic]
+
+    return tickets
