@@ -106,18 +106,19 @@ def update_ticket_priority(ticket_id: UUID, priority: schemas.Priority, db: Sess
 
 @app.get("/tickets", tags=["tickets"], response_model=list[schemas.TicketPublic])
 def read_tickets(skip: int = 0, limit: int = 100, status: schemas.Status = None, priority: schemas.Priority = None, assigned_to: UUID = None, author: UUID = None, topic: schemas.Topic = None,  db: Session = Depends(database.get_db)):
-    tickets = db.query(models.Ticket).order_by(
-        models.Ticket.created_at.desc()).offset(skip).limit(limit).all()
-    if status:
-        tickets = [ticket for ticket in tickets if ticket.status == status]
-    if priority:
-        tickets = [ticket for ticket in tickets if ticket.priority == priority]
-    if assigned_to:
-        tickets = [
-            ticket for ticket in tickets if ticket.assigned_to == assigned_to]
-    if author:
-        tickets = [ticket for ticket in tickets if ticket.author == author]
-    if topic:
-        tickets = [ticket for ticket in tickets if ticket.topic == topic]
+    query = db.query(models.Ticket)
 
+    if status:
+        query = query.filter(models.Ticket.status == status)
+    if priority:
+        query = query.filter(models.Ticket.priority == priority)
+    if assigned_to:
+        query = query.filter(models.Ticket.assigned_to == assigned_to)
+    if author:
+        query = query.filter(models.Ticket.author == author)
+    if topic:
+        query = query.filter(models.Ticket.topic == topic)
+
+    tickets = query.order_by(models.Ticket.created_at.desc()).offset(
+        skip).limit(limit).all()
     return tickets
