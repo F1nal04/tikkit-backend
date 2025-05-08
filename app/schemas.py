@@ -27,6 +27,13 @@ class Topic(Enum):
     other = "other"
 
 
+class Role(Enum):
+    admin = "admin"
+    worker = "worker"
+    user = "user"
+    inactive = "inactive"
+
+
 class TicketBase(BaseModel):
     topic: Topic
     description: str
@@ -59,3 +66,31 @@ class TicketUpdate(TicketBase):
     status: Status | None = None
     assigned_to: UUID | None = None
     author: UUID | None = None
+
+
+class UserBase(BaseModel):
+    email: str
+    password: str
+    name: str
+
+
+class UserCreate(UserBase):
+    pass
+
+
+class User(UserBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    role: Role
+
+
+class UserPublic(User):
+    pass
+
+
+class UserUpdate(UserBase):
+    email: str | None = None
+    password: str | None = None
+    role: Role | None = None
+    name: str | None = None
