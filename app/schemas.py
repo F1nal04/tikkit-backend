@@ -76,12 +76,11 @@ class TicketUpdate(TicketBase):
 
 class UserBase(BaseModel):
     email: str
-    password: str
     name: str
 
 
 class UserCreate(UserBase):
-    pass
+    password: str
 
 
 class User(UserBase):

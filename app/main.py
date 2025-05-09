@@ -4,6 +4,10 @@ from uuid import UUID
 import models
 import schemas
 import database
+from fastapi.security import OAuth2PasswordRequestForm
+from security import verify_password, create_access_token
+from sqlalchemy.exc import IntegrityError
+from security import get_password_hash
 
 # Create the database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -23,6 +27,37 @@ app = FastAPI(
         }
     ]
 )
+
+
+@app.post("/register", tags=["auth"], response_model=schemas.Token)
+def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+    hashed_password = get_password_hash(user.password)
+    del user.password
+
+    db_user = models.User(**user.model_dump())
+    db_user.hashed_password = hashed_password
+
+    db.add(db_user)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=400, detail="Email already registered")
+    db.refresh(db_user)
+    access_token = create_access_token({"sub": str(db_user.id)})
+    return {"access_token": access_token, "token_type": "bearer"}
+
+
+@app.post("/login", tags=["auth"], response_model=schemas.Token)
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    client_id = db.query(models.User).filter(
+        models.User.email == form_data.username).first().id
+    user = db.get(models.User, client_id)
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=400, detail="Incorrect email or password")
+    access_token = create_access_token({"sub": str(user.id)})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 
 @app.post("/ticket", tags=["ticket"], response_model=schemas.TicketPublic)

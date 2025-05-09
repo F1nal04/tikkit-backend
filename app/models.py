@@ -35,7 +35,6 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     name = Column(String, index=True, nullable=False)
     hashed_password = Column(String(128), nullable=False)
-    salt = Column(String(32), nullable=False)
     role: Mapped[Role] = mapped_column(default=Role.user)
     created_at = Column(Date, default=date.today())
     updated_at = Column(Date, default=date.today(), onupdate=date.today())
