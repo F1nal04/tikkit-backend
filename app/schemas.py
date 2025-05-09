@@ -32,6 +32,12 @@ class Role(Enum):
     worker = "worker"
     user = "user"
     inactive = "inactive"
+    deactivated = "deactivated"
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
 
 class TicketBase(BaseModel):
