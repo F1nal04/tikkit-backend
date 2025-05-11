@@ -27,12 +27,24 @@ class Topic(Enum):
     other = "other"
 
 
+class Role(Enum):
+    admin = "admin"
+    worker = "worker"
+    user = "user"
+    inactive = "inactive"
+    deactivated = "deactivated"
+
+
+class Token(BaseModel):
+    access_token: str
+    token_type: str
+
+
 class TicketBase(BaseModel):
     topic: Topic
     description: str
     message: str | None
     priority: Priority
-    author: UUID
 
 
 class TicketCreate(TicketBase):
@@ -45,6 +57,7 @@ class Ticket(TicketBase):
     updated_at: datetime
     status: Status
     assigned_to: UUID | None
+    author: UUID
 
 
 class TicketPublic(Ticket):
@@ -58,4 +71,30 @@ class TicketUpdate(TicketBase):
     priority: Priority | None = None
     status: Status | None = None
     assigned_to: UUID | None = None
-    author: UUID | None = None
+
+
+class UserBase(BaseModel):
+    email: str
+    name: str
+
+
+class UserCreate(UserBase):
+    password: str
+
+
+class User(UserBase):
+    id: UUID
+    created_at: datetime
+    updated_at: datetime
+    role: Role
+
+
+class UserPublic(User):
+    pass
+
+
+class UserUpdate(UserBase):
+    email: str | None = None
+    password: str | None = None
+    role: Role | None = None
+    name: str | None = None
