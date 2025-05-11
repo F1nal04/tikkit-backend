@@ -9,6 +9,7 @@ from database import get_db
 from dotenv import load_dotenv
 import models
 import os
+from uuid import UUID
 
 load_dotenv()
 
@@ -58,6 +59,7 @@ def get_current_user(
         user_id: str = payload.get("sub")
         if not user_id:
             raise credentials_exception
+        user_id = UUID(user_id)
         user = db.get(models.User, user_id)
         if not user:
             raise credentials_exception

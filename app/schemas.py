@@ -45,7 +45,6 @@ class TicketBase(BaseModel):
     description: str
     message: str | None
     priority: Priority
-    author: UUID
 
 
 class TicketCreate(TicketBase):
@@ -58,6 +57,7 @@ class Ticket(TicketBase):
     updated_at: datetime
     status: Status
     assigned_to: UUID | None
+    author: UUID
 
 
 class TicketPublic(Ticket):
@@ -71,7 +71,6 @@ class TicketUpdate(TicketBase):
     priority: Priority | None = None
     status: Status | None = None
     assigned_to: UUID | None = None
-    author: UUID | None = None
 
 
 class UserBase(BaseModel):

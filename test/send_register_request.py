@@ -2,7 +2,7 @@ import requests
 
 test_users = [
     {
-        "email": "leongaborbojanowski0@gmail.com",
+        "email": "leongaborbojanowski04@gmail.com",
         "password": "Test1234",
         "name": "Leon Gabor Bojanowski"
     },
