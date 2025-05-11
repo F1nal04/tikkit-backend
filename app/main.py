@@ -35,9 +35,9 @@ app = FastAPI(
 @app.post("/register", tags=["auth"], response_model=schemas.Token)
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     hashed_password = get_password_hash(user.password)
-    del user.password
+    user_data = user.model_dump(exclude={'password'})
 
-    db_user = models.User(**user.model_dump())
+    db_user = models.User(**user_data)
     db_user.hashed_password = hashed_password
 
     db.add(db_user)
@@ -121,7 +121,7 @@ def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models.User 
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    if not ((current_user.role == schemas.Role.admin) or (current_user.id == assigned_to and db_ticket.assigned_to == None)):
+    if not ((current_user.role == schemas.Role.admin) or (current_user.id == assigned_to and db_ticket.assigned_to is None)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
     db_ticket.assigned_to = assigned_to
