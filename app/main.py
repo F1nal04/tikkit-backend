@@ -53,10 +53,12 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
 
 @app.post("/token", tags=["auth"], response_model=schemas.Token)
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
-    client_id = db.query(models.User).filter(
-        models.User.email == form_data.username).first().id
-    user = db.get(models.User, client_id)
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    user = db.query(models.User).filter(
+        models.User.email == form_data.username).first()
+    if not user:
+        raise HTTPException(
+            status_code=400, detail="Incorrect email or password")
+    if not verify_password(form_data.password, user.hashed_password):
         raise HTTPException(
             status_code=400, detail="Incorrect email or password")
     access_token = create_access_token({"sub": str(user.id)})
@@ -114,15 +116,15 @@ def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get_curre
 
 
 @app.put("/ticket/{ticket_id}/assign", tags=["ticket"], response_model=schemas.TicketPublic)
-def assign_ticket(ticket_id: UUID, assign_to: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
 
-    if not ((current_user.role == schemas.Role.admin) or (current_user.id == assign_to and db_ticket.assigned_to == None)):
+    if not ((current_user.role == schemas.Role.admin) or (current_user.id == assigned_to and db_ticket.assigned_to == None)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    db_ticket.assigned_to = assign_to
+    db_ticket.assigned_to = assigned_to
     db.commit()
     db.refresh(db_ticket)
     return db_ticket

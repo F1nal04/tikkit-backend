@@ -23,9 +23,9 @@ class Ticket(Base):
         nullable=False)
     assigned_to = Column(UUID, ForeignKey("users.id"), nullable=True)
     author = Column(UUID, ForeignKey("users.id"), nullable=False)
-    created_at = Column(Date, default=date.today())
-    updated_at = Column(Date, default=date.today(),
-                        onupdate=date.today())
+    created_at = Column(Date, default=date.today)
+    updated_at = Column(Date, default=date.today,
+                        onupdate=date.today)
 
 
 class User(Base):
@@ -36,5 +36,6 @@ class User(Base):
     name = Column(String, index=True, nullable=False)
     hashed_password = Column(String(128), nullable=False)
     role: Mapped[Role] = mapped_column(default=Role.user)
-    created_at = Column(Date, default=date.today())
-    updated_at = Column(Date, default=date.today(), onupdate=date.today())
+    created_at = Column(Date, default=date.today)
+    updated_at = Column(Date, default=date.today,
+                        onupdate=date.today)
