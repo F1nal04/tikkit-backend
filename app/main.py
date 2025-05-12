@@ -7,6 +7,7 @@ import database
 from fastapi.security import OAuth2PasswordRequestForm
 from security import verify_password, create_access_token, get_password_hash, get_current_active_user
 from sqlalchemy.exc import IntegrityError
+import ai
 
 # Create the database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -163,3 +164,14 @@ def read_tickets(skip: int = 0, limit: int = 100, status: schemas.Status = None,
     tickets = query.order_by(models.Ticket.created_at.desc()).offset(
         skip).limit(limit).all()
     return tickets
+
+
+@app.get("/ai_request/{ticket_id}", tags=["ai"])
+def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    if not current_user.role == schemas.Role.admin:
+        raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    ticket = db.get(models.Ticket, ticket_id)
+    if not ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+    return ai.get_response(ticket)

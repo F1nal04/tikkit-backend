@@ -3,3 +3,4 @@ SQLAlchemy
 argon2-cffi
 PyJWT
 dotenv
+openai
