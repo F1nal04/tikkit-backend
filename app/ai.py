@@ -60,13 +60,6 @@ def get_response(ticket: Ticket):
     )
     return response.output_text
 
-# response = client.responses.create(
-#     model="gpt-4.1-nano",
-#     input="Hello! What Model are you?"
-# )
-
-# print(response.output_text)
-
 
 if __name__ == "__main__":
     console = Console()
