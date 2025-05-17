@@ -1,4 +1,3 @@
-from fastapi.security import api_key
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
@@ -27,7 +26,7 @@ def generate_instructions(ticket: Ticket) -> str:
     Do give solutions that are clear, and concise
     Answer in German.
     Do not include any additional information or context.
-    The user cant answer back.
+    The user can't answer back.
     """
     return instructions
 

@@ -110,8 +110,7 @@ test_tickets = [
 
 
 for i, ticket_data in enumerate(test_tickets, 1):
-    random_index = random.randint(0, len(user_tokens))
-    token = user_tokens[random_index]
+    token = random.choice(user_tokens)
     ticket_data = ticket_data.copy()
     headers = {"Content-Type": "application/json",
                "Authorization": f"Bearer {token}"}
