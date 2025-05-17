@@ -21,6 +21,8 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 ph = PasswordHasher()
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+optional_oauth2_scheme = OAuth2PasswordBearer(
+    tokenUrl="token", auto_error=False)
 
 
 def verify_password(plain_password, hashed_password):
@@ -69,6 +71,35 @@ def get_current_user(
 
 
 def get_current_active_user(current_user: models.User = Depends(get_current_user)):
+    if current_user.role == Role.deactivated:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="User is deactivated",
+        )
+    return current_user
+
+
+def get_current_user_optional(
+    token: str | None = Depends(optional_oauth2_scheme),
+    db: Session = Depends(get_db)
+):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id:
+            return None
+        user_id = UUID(user_id)
+        user = db.get(models.User, user_id)
+        if not user:
+            return None
+        return user
+    except jwt.exceptions.InvalidTokenError:
+        return None
+
+
+def get_current_active_user_optional(current_user: models.User = Depends(get_current_user_optional)):
+    if not current_user:
+        return None
     if current_user.role == Role.deactivated:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,

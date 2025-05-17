@@ -5,8 +5,9 @@ import models
 import schemas
 import database
 from fastapi.security import OAuth2PasswordRequestForm
-from security import verify_password, create_access_token, get_password_hash, get_current_active_user
+from security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user
 from sqlalchemy.exc import IntegrityError
+from typing import Optional
 import ai
 
 # Create the database tables
@@ -175,3 +176,17 @@ def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depends(get
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return ai.get_response(ticket)
+
+
+@app.get("/user", tags=["user"], response_model=schemas.UserPublic)
+def get_user(user_id: UUID | None = None, db: Session = Depends(database.get_db), current_user: models.User | None = Depends(get_current_active_user_optional)):
+    if not user_id:
+        if not current_user:
+            raise HTTPException(
+                status_code=400, detail="No user_id provided and no authenticated user.")
+        user = db.get(models.User, current_user.id)
+    else:
+        user = db.get(models.User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    return user
