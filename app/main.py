@@ -7,7 +7,6 @@ import database
 from fastapi.security import OAuth2PasswordRequestForm
 from security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
 from sqlalchemy.exc import IntegrityError
-from typing import Optional, Annotated
 import ai
 
 # Create the database tables
@@ -321,7 +320,7 @@ def change_role(user_id: UUID, role: schemas.RoleChange, current_user: models.Us
 
 
 @app.get("/users", tags=["users"], response_model=list[schemas.UserPublic])
-def get_users(skip: int = 0, limit: int = 100, role: schemas.Role = None, db: Session = Depends(database.get_db)):
+def get_users(skip: int = 0, limit: int = 100, role: schemas.Role | None = None, db: Session = Depends(database.get_db)):
     query = db.query(models.User)
     if role:
         query = query.filter(models.User.role == role)

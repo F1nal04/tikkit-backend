@@ -25,7 +25,8 @@ class Ticket(Base):
     assigned_to_user = relationship(
         "User", foreign_keys=[assigned_to])
     author = Column(UUID, ForeignKey("users.id"), nullable=False)
-    author_user = relationship("User", foreign_keys=[author])
+    author_user = relationship("User", foreign_keys=[
+                               author], back_populates="tickets")
     created_at = Column(Date, default=date.today)
     updated_at = Column(Date, default=date.today,
                         onupdate=date.today)

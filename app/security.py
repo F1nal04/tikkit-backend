@@ -101,6 +101,8 @@ def get_current_user_optional(
     token: str | None = Depends(optional_oauth2_scheme),
     db: Session = Depends(get_db)
 ):
+    if not token:
+        return None
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")

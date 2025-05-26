@@ -101,7 +101,7 @@ class UserUpdate(UserBase):
 
 
 class PasswordChange(BaseModel):
-    old_password: str | None = None
+    old_password: str
     new_password: str
 
 
