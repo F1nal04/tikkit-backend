@@ -1,23 +1,50 @@
 # Tikkit Backend
 
-A simple REST API for managing tickets built with FastAPI and SQLAlchemy.
+A comprehensive REST API for managing IT support tickets built with FastAPI and SQLAlchemy. Features user authentication, role-based access control, and AI-powered ticket assistance.
+
+## Features
+
+- 🎫 **Ticket Management**: Create, read, update, delete, and assign tickets
+- 👥 **User Management**: User registration, authentication, and profile management
+- 🔐 **Role-Based Access Control**: Admin, worker, user, and deactivated roles
+- 🤖 **AI Integration**: AI-powered ticket solution suggestions
+- 📊 **Advanced Filtering**: Filter tickets by status, priority, topic, assignee, and author
+- 🔒 **Secure Authentication**: JWT tokens with Argon2 password hashing
 
 ## Setup
 
-1. Create and activate a virtual environment:
+### Prerequisites
+
+- Python 3.8+
+- Virtual environment (recommended)
+
+### Installation
+
+1. **Clone the repository and navigate to the project directory**
+
+2. **Create and activate a virtual environment:**
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 ```
 
-2. Install dependencies:
+3. **Install dependencies:**
 
 ```bash
 pip install -r requirements.txt
 ```
 
-3. Run the application:
+4. **Set up environment variables:**
+
+Create a `.env` file in the root directory:
+
+```env
+SECRET_KEY=your-secret-key-here
+OPENAI_API_KEY=your-openai-api-key-here  # Optional, for AI features
+```
+
+5. **Run the application:**
 
 ```bash
 fastapi dev app/main.py
@@ -29,13 +56,130 @@ The API will be available at `http://localhost:8000`
 
 Once the server is running, you can access:
 
-- Interactive API documentation (Swagger UI): `http://localhost:8000/docs`
-- Alternative API documentation (ReDoc): `http://localhost:8000/redoc`
+- **Interactive API documentation (Swagger UI)**: `http://localhost:8000/docs`
+- **Alternative API documentation (ReDoc)**: `http://localhost:8000/redoc`
 
-## Available Endpoints
+## Data Models
 
-- `POST /ticket` - Create a new ticket
-- `GET /tickets` - List all tickets
+### User Roles
+
+- `admin` - Full access to all operations
+- `worker` - Can be assigned tickets and update ticket status
+- `user` - Can create tickets and close their own tickets
+- `inactive` - Limited access
+- `deactivated` - No access
+
+### Ticket Status
+
+- `open` - New ticket
+- `in_progress` - Being worked on
+- `closed` - Resolved
+- `hold` - Temporarily paused
+
+### Ticket Priority
+
+- `low` - Non-urgent
+- `medium` - Standard priority
+- `high` - Urgent
+
+### Ticket Topics
+
+- `printer` - Printer issues
+- `nas` - Network storage issues
+- `wifi` - Wireless network issues
+- `lan` - Wired network issues
+- `macbook` - MacBook issues
+- `imac` - iMac issues
+- `other` - Other IT issues
+
+## API Endpoints
+
+### Authentication
+
+- `POST /register` - Register a new user
+- `POST /token` - Login and get access token
+
+### Tickets
+
+- `POST /ticket` - Create a new ticket (authenticated users)
 - `GET /ticket/{ticket_id}` - Get a specific ticket
-- `PUT /ticket/{ticket_id}` - Update a ticket
-- `DELETE /ticket/{ticket_id}` - Delete a ticket
+- `PUT /ticket/{ticket_id}` - Update a ticket (admin only)
+- `DELETE /ticket/{ticket_id}` - Delete a ticket (admin only)
+- `PUT /ticket/{ticket_id}/assign` - Assign ticket to user
+- `PUT /ticket/{ticket_id}/status` - Update ticket status
+- `GET /tickets` - List tickets with filtering options
+
+### Users
+
+- `GET /user` - Get current user profile or specific user by query parameter
+- `PUT /user/{user_id}` - Update user profile
+- `DELETE /user/{user_id}` - Delete user (with ticket validation)
+- `PUT /user/{user_id}/password` - Change user password
+- `PUT /user/{user_id}/email` - Change user email
+- `PUT /user/{user_id}/role` - Change user role (admin only)
+- `GET /users` - List all users with filtering
+
+### AI Integration
+
+- `GET /ai_request/{ticket_id}` - Get AI-powered solution for a ticket (admin only)
+
+## Permission System
+
+### Ticket Operations
+
+- **Create**: Any authenticated user
+- **Read**: Any user (public access)
+- **Update/Delete**: Admin only
+- **Assign**: Admin or self-assignment to unassigned tickets
+- **Status Update**: Admin, ticket author (close only), or assigned user
+
+### User Operations
+
+- **Profile Access**: Own profile or any profile (with optional auth)
+- **Profile Update**: Own profile or admin for any profile
+- **Password Change**: Own password (requires old password) or admin (no old password required)
+- **Email Change**: Own email (requires password) or admin (no password required)
+- **Role Change**: Admin only (cannot change admin roles)
+- **Delete**: Admin only (prevents deletion if user has tickets)
+
+## Security Features
+
+- **JWT Authentication**: 30-minute token expiration with UTC timestamps
+- **Argon2 Password Hashing**: Industry-standard password security
+- **Role-Based Access Control**: Granular permissions based on user roles
+- **Admin Protection**: Prevents modification of admin user roles
+- **Data Integrity**: Prevents user deletion when tickets exist
+
+## Development
+
+### Running Tests
+
+```bash
+# Example ticket creation script
+python test/send_ticket_requests.py
+```
+
+### Database
+
+The application uses SQLite by default with SQLAlchemy ORM. Database tables are created automatically on startup.
+
+## Dependencies
+
+- **FastAPI**: Modern web framework for building APIs
+- **SQLAlchemy**: SQL toolkit and ORM
+- **Argon2**: Password hashing
+- **PyJWT**: JSON Web Token implementation
+- **OpenAI**: AI integration (optional)
+- **Python-dotenv**: Environment variable management
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License.
