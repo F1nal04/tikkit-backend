@@ -5,9 +5,9 @@ import models
 import schemas
 import database
 from fastapi.security import OAuth2PasswordRequestForm
-from security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user
+from security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
 from sqlalchemy.exc import IntegrityError
-from typing import Optional
+from typing import Optional, Annotated
 import ai
 
 # Create the database tables
@@ -48,6 +48,9 @@ app = FastAPI(
 
 @app.post("/register", tags=["auth"], response_model=schemas.Token)
 def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+    if not check_password_strength(user.password):
+        raise HTTPException(
+            status_code=400, detail="Password must be at least 8 characters long and contain at least one number and one special character.")
     hashed_password = get_password_hash(user.password)
     user_data = user.model_dump(exclude={'password'})
 

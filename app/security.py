@@ -10,6 +10,7 @@ from dotenv import load_dotenv
 import models
 import os
 from uuid import UUID
+import string
 
 load_dotenv()
 
@@ -17,6 +18,7 @@ SECRET_KEY = os.getenv("SECRET_KEY")
 if not SECRET_KEY:
     raise RuntimeError("SECRET_KEY environment variable is not set.")
 ALGORITHM = "HS256"
+PASSWORD_MIN_LENGTH = 8
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
 ph = PasswordHasher()
@@ -34,6 +36,21 @@ def verify_password(plain_password, hashed_password):
 
 def get_password_hash(password):
     return ph.hash(password)
+
+
+def check_password_strength(password: str) -> bool:
+    if len(password) < PASSWORD_MIN_LENGTH:
+        return False
+
+    has_number = any(char.isdigit() for char in password)
+    if not has_number:
+        return False
+
+    has_special_char = any(char in string.punctuation for char in password)
+    if not has_special_char:
+        return False
+
+    return True
 
 
 def create_access_token(data: dict, expires_delta: timedelta | None = None):
