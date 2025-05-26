@@ -35,6 +35,10 @@ app = FastAPI(
             "description": "Operations for a single user. The **user** endpoint allows you to read, update and delete a user.",
         },
         {
+            "name": "users",
+            "description": "Operations for multiple users. The **users** endpoint allows you to read all users.",
+        },
+        {
             "name": "ai",
             "description": "Operations for ai purposes. The **ai** endpoint allows you to create requests to the ai.",
         }
@@ -231,7 +235,6 @@ def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_a
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    # Check if user has any tickets as author
     tickets_as_author = db.query(models.Ticket).filter(
         models.Ticket.author == user_id).count()
     if tickets_as_author > 0:
@@ -240,7 +243,6 @@ def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_a
             detail=f"Cannot delete user: user has {tickets_as_author} tickets as author. Please reassign or delete these tickets first."
         )
 
-    # Check if user has any tickets assigned to them
     tickets_assigned = db.query(models.Ticket).filter(
         models.Ticket.assigned_to == user_id).count()
     if tickets_assigned > 0:
@@ -252,3 +254,14 @@ def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_a
     db.delete(db_user)
     db.commit()
     return {"message": "User deleted successfully"}
+
+
+@app.get("/users", tags=["users"], response_model=list[schemas.UserPublic])
+def get_users(skip: int = 0, limit: int = 100, role: schemas.Role = None, db: Session = Depends(database.get_db)):
+    query = db.query(models.User)
+    if role:
+        query = query.filter(models.User.role == role)
+
+    users = query.order_by(models.User.created_at.desc()).offset(
+        skip).limit(limit).all()
+    return users
