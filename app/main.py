@@ -29,6 +29,14 @@ app = FastAPI(
         {
             "name": "tickets",
             "description": "Operations for multiple tickets. The **tickets** endpoint allows you to read all tickets.",
+        },
+        {
+            "name": "user",
+            "description": "Operations for a single user. The **user** endpoint allows you to read, update and delete a user.",
+        },
+        {
+            "name": "ai",
+            "description": "Operations for ai purposes. The **ai** endpoint allows you to create requests to the ai.",
         }
     ]
 )
@@ -179,7 +187,7 @@ def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depends(get
 
 
 @app.get("/user", tags=["user"], response_model=schemas.UserPublic)
-def get_user(user_id: UUID | None = None, db: Session = Depends(database.get_db), current_user: models.User | None = Depends(get_current_active_user_optional)):
+def get_user(user_id: UUID | None = None,  current_user: models.User | None = Depends(get_current_active_user_optional), db: Session = Depends(database.get_db)):
     if not user_id:
         if not current_user:
             raise HTTPException(
@@ -190,3 +198,57 @@ def get_user(user_id: UUID | None = None, db: Session = Depends(database.get_db)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
+
+
+@app.put("/user/{user_id}", tags=["user"], response_model=schemas.UserPublic)
+def update_user(user_id: UUID, user: schemas.UserUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    if not current_user.role == schemas.Role.admin:
+        if not user_id == current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not enough permissions")
+
+    db_user = db.get(models.User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update_data = user.model_dump(exclude_unset=True)
+    for field, value in update_data.items():
+        setattr(db_user, field, value)
+
+    db.commit()
+    db.refresh(db_user)
+    return db_user
+
+
+@app.delete("/user/{user_id}", tags=["user"])
+def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    if not current_user.role == schemas.Role.admin:
+        if not user_id == current_user.id:
+            raise HTTPException(
+                status_code=403, detail="Not enough permissions")
+
+    db_user = db.get(models.User, user_id)
+    if not db_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Check if user has any tickets as author
+    tickets_as_author = db.query(models.Ticket).filter(
+        models.Ticket.author == user_id).count()
+    if tickets_as_author > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete user: user has {tickets_as_author} tickets as author. Please reassign or delete these tickets first."
+        )
+
+    # Check if user has any tickets assigned to them
+    tickets_assigned = db.query(models.Ticket).filter(
+        models.Ticket.assigned_to == user_id).count()
+    if tickets_assigned > 0:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot delete user: user has {tickets_assigned} tickets assigned to them. Please reassign these tickets first."
+        )
+
+    db.delete(db_user)
+    db.commit()
+    return {"message": "User deleted successfully"}
