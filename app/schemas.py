@@ -98,3 +98,17 @@ class UserUpdate(UserBase):
     password: str | None = None
     role: Role | None = None
     name: str | None = None
+
+
+class PasswordChange(BaseModel):
+    old_password: str
+    new_password: str
+
+
+class EmailChange(BaseModel):
+    password: str
+    new_email: str
+
+
+class RoleChange(BaseModel):
+    new_role: Role
