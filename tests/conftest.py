@@ -4,7 +4,10 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from app.main import app
 from app.database import get_db
-from app.models import Base
+from app.models import Base, User
+from app.schemas import Role
+import jwt
+from uuid import UUID
 
 # Create test database
 SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
@@ -52,7 +55,7 @@ def auth_user(client):
 
 @pytest.fixture
 def admin_user(client):
-    """Create and authenticate an admin user"""
+    """Create and authenticate a real admin user"""
     user_data = {
         "email": "admin@example.com",
         "name": "Admin User",
@@ -63,11 +66,23 @@ def admin_user(client):
     response = client.post("/register", json=user_data)
     assert response.status_code == 200
     
+    # Get user ID from token
     token = response.json()["access_token"]
+    decoded_token = jwt.decode(token, options={"verify_signature": False})
+    user_id = decoded_token["sub"]
+    
+    # Promote user to admin directly in database
+    db = TestingSessionLocal()
+    try:
+        # Convert string UUID to UUID object
+        user_uuid = UUID(user_id)
+        db_user = db.get(User, user_uuid)
+        db_user.role = Role.admin
+        db.commit()
+        db.refresh(db_user)
+    finally:
+        db.close()
+    
     headers = {"Authorization": f"Bearer {token}"}
     
-    # Note: In a real scenario, you'd need to promote this user to admin
-    # For testing purposes, the admin fixture creates a regular user
-    # The admin-specific tests may need adjustment based on your role management
-    
-    return {"headers": headers, "user_data": user_data, "token": token}
+    return {"headers": headers, "user_data": user_data, "token": token, "user_id": user_id}
