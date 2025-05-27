@@ -2,7 +2,7 @@ from datetime import date
 from uuid import uuid4
 
 from sqlalchemy import UUID, Boolean, Column, ForeignKey, String, Text, Date
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from schemas import Topic, Status, Priority, Role
