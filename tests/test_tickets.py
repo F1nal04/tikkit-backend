@@ -4,7 +4,7 @@ from app.schemas import Priority, Topic, Status
 
 class TestTicketEndpoint:
     """Test cases for /ticket endpoint (CRUD operations)"""
-    
+
     def test_create_ticket_success(self, client, auth_user):
         """Test successful ticket creation"""
         ticket_data = {
@@ -13,9 +13,10 @@ class TestTicketEndpoint:
             "message": "Unable to connect to corporate WiFi network",
             "priority": Priority.medium.value
         }
-        
-        response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
-        
+
+        response = client.post("/ticket", json=ticket_data,
+                               headers=auth_user["headers"])
+
         assert response.status_code == 200
         data = response.json()
         assert data["topic"] == ticket_data["topic"]
@@ -27,7 +28,7 @@ class TestTicketEndpoint:
         assert "created_at" in data
         assert "author" in data
         assert data["author_name"] == auth_user["user_data"]["name"]
-    
+
     def test_create_ticket_unauthorized(self, client):
         """Test ticket creation without authentication"""
         ticket_data = {
@@ -36,21 +37,22 @@ class TestTicketEndpoint:
             "message": "Paper jam in main printer",
             "priority": Priority.high.value
         }
-        
+
         response = client.post("/ticket", json=ticket_data)
-        
+
         assert response.status_code == 401
-    
+
     def test_create_ticket_missing_fields(self, client, auth_user):
         """Test ticket creation with missing required fields"""
         incomplete_data = {
             "topic": Topic.wifi.value,
             # Missing description and priority
         }
-        
-        response = client.post("/ticket", json=incomplete_data, headers=auth_user["headers"])
+
+        response = client.post(
+            "/ticket", json=incomplete_data, headers=auth_user["headers"])
         assert response.status_code == 422  # Validation error
-    
+
     def test_read_ticket_success(self, client, auth_user):
         """Test reading a specific ticket"""
         # First create a ticket
@@ -60,30 +62,31 @@ class TestTicketEndpoint:
             "message": "Screen flickers when opening certain applications",
             "priority": Priority.high.value
         }
-        
-        create_response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=auth_user["headers"])
         assert create_response.status_code == 200
         ticket_id = create_response.json()["id"]
-        
+
         # Read the ticket
         response = client.get(f"/ticket/{ticket_id}")
-        
+
         assert response.status_code == 200
         data = response.json()
         assert data["id"] == ticket_id
         assert data["topic"] == ticket_data["topic"]
         assert data["description"] == ticket_data["description"]
-    
+
     def test_read_ticket_not_found(self, client):
         """Test reading a non-existent ticket"""
         fake_id = "550e8400-e29b-41d4-a716-446655440000"
         response = client.get(f"/ticket/{fake_id}")
-        
+
         assert response.status_code == 404
         assert "Ticket not found" in response.json()["detail"]
-    
-    def test_update_ticket_admin_requires_admin_role(self, client, admin_user):
-        """Test ticket update requires admin role (regular user should fail)"""
+
+    def test_update_ticket_admin_success(self, client, admin_user):
+        """Test ticket update by real admin user (should succeed)"""
         # First create a ticket
         ticket_data = {
             "topic": Topic.imac.value,
@@ -91,24 +94,29 @@ class TestTicketEndpoint:
             "message": "Black screen on startup",
             "priority": Priority.high.value
         }
-        
-        create_response = client.post("/ticket", json=ticket_data, headers=admin_user["headers"])
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=admin_user["headers"])
         assert create_response.status_code == 200
         ticket_id = create_response.json()["id"]
-        
-        # Try to update the ticket (should fail since admin_user is actually a regular user)
+
+        # Update the ticket (should succeed since user is admin)
         update_data = {
             "description": "iMac won't boot - Updated description",
             "priority": Priority.low.value,
             "status": Status.in_progress.value
         }
-        
-        response = client.put(f"/ticket/{ticket_id}", json=update_data, headers=admin_user["headers"])
-        
-        # Should fail because user is not actually admin
-        assert response.status_code == 403
-        assert "Not enough permissions" in response.json()["detail"]
-    
+
+        response = client.put(
+            f"/ticket/{ticket_id}", json=update_data, headers=admin_user["headers"])
+
+        # Should succeed because user is admin
+        assert response.status_code == 200
+        data = response.json()
+        assert data["description"] == update_data["description"]
+        assert data["priority"] == update_data["priority"]
+        assert data["status"] == update_data["status"]
+
     def test_update_ticket_non_admin(self, client, auth_user):
         """Test ticket update by non-admin user (should fail)"""
         # First create a ticket
@@ -118,41 +126,223 @@ class TestTicketEndpoint:
             "message": "Cannot access shared drives",
             "priority": Priority.medium.value
         }
-        
-        create_response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=auth_user["headers"])
         assert create_response.status_code == 200
         ticket_id = create_response.json()["id"]
-        
+
         # Try to update the ticket (should fail for non-admin)
         update_data = {
             "description": "Updated description",
             "status": Status.closed.value
         }
-        
-        response = client.put(f"/ticket/{ticket_id}", json=update_data, headers=auth_user["headers"])
-        
+
+        response = client.put(
+            f"/ticket/{ticket_id}", json=update_data, headers=auth_user["headers"])
+
         assert response.status_code == 403
         assert "Not enough permissions" in response.json()["detail"]
-    
+
+    def test_delete_ticket_admin_success(self, client, admin_user):
+        """Test deleting a ticket by admin user (should succeed)"""
+        # First create a ticket
+        ticket_data = {
+            "topic": Topic.printer.value,
+            "description": "Old printer needs removal",
+            "message": "Printer is obsolete",
+            "priority": Priority.low.value
+        }
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=admin_user["headers"])
+        assert create_response.status_code == 200
+        ticket_id = create_response.json()["id"]
+
+        # Delete the ticket (should succeed since user is admin)
+        response = client.delete(
+            f"/ticket/{ticket_id}", headers=admin_user["headers"])
+
+        assert response.status_code == 200
+        assert "Ticket deleted successfully" in response.json()["message"]
+
+        # Verify ticket is actually deleted
+        get_response = client.get(f"/ticket/{ticket_id}")
+        assert get_response.status_code == 404
+
+    def test_delete_ticket_non_admin(self, client, auth_user):
+        """Test deleting a ticket by non-admin user (should fail)"""
+        # First create a ticket
+        ticket_data = {
+            "topic": Topic.wifi.value,
+            "description": "WiFi issue",
+            "message": "Can't delete this",
+            "priority": Priority.medium.value
+        }
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=auth_user["headers"])
+        assert create_response.status_code == 200
+        ticket_id = create_response.json()["id"]
+
+        # Try to delete the ticket (should fail since user is not admin)
+        response = client.delete(
+            f"/ticket/{ticket_id}", headers=auth_user["headers"])
+
+        assert response.status_code == 403
+        assert "Not enough permissions" in response.json()["detail"]
+
     def test_delete_ticket_not_found(self, client, admin_user):
         """Test deleting a non-existent ticket"""
         fake_id = "550e8400-e29b-41d4-a716-446655440000"
-        response = client.delete(f"/ticket/{fake_id}", headers=admin_user["headers"])
-        
+        response = client.delete(
+            f"/ticket/{fake_id}", headers=admin_user["headers"])
+
         assert response.status_code == 404
         assert "Ticket not found" in response.json()["detail"]
+
+    def test_assign_ticket_admin_success(self, client, admin_user, auth_user):
+        """Test ticket assignment by admin user (should succeed)"""
+        # First create a ticket
+        ticket_data = {
+            "topic": Topic.lan.value,
+            "description": "Network configuration needed",
+            "message": "Setup new VLAN",
+            "priority": Priority.medium.value
+        }
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=admin_user["headers"])
+        assert create_response.status_code == 200
+        ticket_id = create_response.json()["id"]
+
+        # Assign the ticket to auth_user (admin can assign to anyone)
+        assign_response = client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": admin_user["user_id"]},
+            headers=admin_user["headers"]
+        )
+
+        assert assign_response.status_code == 200
+        data = assign_response.json()
+        assert data["assigned_to"] == admin_user["user_id"]
+
+    def test_assign_ticket_non_admin_to_self(self, client, auth_user):
+        """Test user assigning unassigned ticket to themselves (should succeed)"""
+        # First create a ticket with admin or another user
+        ticket_data = {
+            "topic": Topic.macbook.value,
+            "description": "MacBook setup",
+            "message": "Initial configuration needed",
+            "priority": Priority.low.value
+        }
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=auth_user["headers"])
+        assert create_response.status_code == 200
+        ticket_id = create_response.json()["id"]
+
+        # Get the user ID for assignment
+        import jwt
+        decoded_token = jwt.decode(auth_user["token"], options={
+                                   "verify_signature": False})
+        user_id = decoded_token["sub"]
+
+        # User assigns ticket to themselves (should be allowed if ticket is unassigned)
+        assign_response = client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": user_id},
+            headers=auth_user["headers"]
+        )
+
+        assert assign_response.status_code == 200
+        data = assign_response.json()
+        assert data["assigned_to"] == user_id
+
+    def test_update_ticket_status_admin(self, client, admin_user):
+        """Test status update by admin user (should succeed)"""
+        # First create a ticket
+        ticket_data = {
+            "topic": Topic.nas.value,
+            "description": "NAS maintenance",
+            "message": "Scheduled maintenance",
+            "priority": Priority.high.value
+        }
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=admin_user["headers"])
+        assert create_response.status_code == 200
+        ticket_id = create_response.json()["id"]
+
+        # Update status to in_progress (admin can change any status)
+        status_response = client.put(
+            f"/ticket/{ticket_id}/status",
+            params={"status": Status.in_progress.value},
+            headers=admin_user["headers"]
+        )
+
+        assert status_response.status_code == 200
+        data = status_response.json()
+        assert data["status"] == Status.in_progress.value
+
+        # Update status to closed
+        status_response = client.put(
+            f"/ticket/{ticket_id}/status",
+            params={"status": Status.closed.value},
+            headers=admin_user["headers"]
+        )
+
+        assert status_response.status_code == 200
+        data = status_response.json()
+        assert data["status"] == Status.closed.value
+
+    def test_update_ticket_status_author_close_only(self, client, auth_user):
+        """Test status update by ticket author (can only close)"""
+        # First create a ticket
+        ticket_data = {
+            "topic": Topic.other.value,
+            "description": "General inquiry",
+            "message": "Question about process",
+            "priority": Priority.low.value
+        }
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=auth_user["headers"])
+        assert create_response.status_code == 200
+        ticket_id = create_response.json()["id"]
+
+        # Author tries to update to in_progress (should fail)
+        status_response = client.put(
+            f"/ticket/{ticket_id}/status",
+            params={"status": Status.in_progress.value},
+            headers=auth_user["headers"]
+        )
+
+        assert status_response.status_code == 403
+        assert "Not enough permissions" in status_response.json()["detail"]
+
+        # Author closes their own ticket (should succeed)
+        status_response = client.put(
+            f"/ticket/{ticket_id}/status",
+            params={"status": Status.closed.value},
+            headers=auth_user["headers"]
+        )
+
+        assert status_response.status_code == 200
+        data = status_response.json()
+        assert data["status"] == Status.closed.value
 
 
 class TestTicketsEndpoint:
     """Test cases for /tickets endpoint (list/filter operations)"""
-    
+
     def test_read_tickets_empty(self, client):
         """Test reading tickets when none exist"""
         response = client.get("/tickets")
-        
+
         assert response.status_code == 200
         assert response.json() == []
-    
+
     def test_read_tickets_basic(self, client, auth_user):
         """Test reading tickets with basic data"""
         # Create a few tickets
@@ -170,25 +360,27 @@ class TestTicketsEndpoint:
                 "priority": Priority.high.value
             }
         ]
-        
+
         created_tickets = []
         for ticket_data in tickets_data:
-            response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+            response = client.post(
+                "/ticket", json=ticket_data, headers=auth_user["headers"])
             assert response.status_code == 200
             created_tickets.append(response.json())
-        
+
         # Read all tickets
         response = client.get("/tickets")
-        
+
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) == 2
-        
+
         # Check that tickets are ordered by created_at descending (newest first)
         for i, ticket in enumerate(tickets):
             assert ticket["topic"] in [t["topic"] for t in tickets_data]
-            assert ticket["description"] in [t["description"] for t in tickets_data]
-    
+            assert ticket["description"] in [t["description"]
+                                             for t in tickets_data]
+
     def test_read_tickets_filter_by_status(self, client, auth_user):
         """Test filtering tickets by status"""
         # Create tickets with different statuses
@@ -198,19 +390,20 @@ class TestTicketsEndpoint:
             "message": "Need help with setup",
             "priority": Priority.low.value
         }
-        
-        response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+
+        response = client.post("/ticket", json=ticket_data,
+                               headers=auth_user["headers"])
         assert response.status_code == 200
-        
+
         # Filter by status
         response = client.get("/tickets", params={"status": Status.open.value})
-        
+
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) >= 1
         for ticket in tickets:
             assert ticket["status"] == Status.open.value
-    
+
     def test_read_tickets_filter_by_priority(self, client, auth_user):
         """Test filtering tickets by priority"""
         # Create a high priority ticket
@@ -220,19 +413,21 @@ class TestTicketsEndpoint:
             "message": "Complete network failure",
             "priority": Priority.high.value
         }
-        
-        response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+
+        response = client.post("/ticket", json=ticket_data,
+                               headers=auth_user["headers"])
         assert response.status_code == 200
-        
+
         # Filter by priority
-        response = client.get("/tickets", params={"priority": Priority.high.value})
-        
+        response = client.get(
+            "/tickets", params={"priority": Priority.high.value})
+
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) >= 1
         for ticket in tickets:
             assert ticket["priority"] == Priority.high.value
-    
+
     def test_read_tickets_filter_by_topic(self, client, auth_user):
         """Test filtering tickets by topic"""
         # Create a printer-related ticket
@@ -242,19 +437,21 @@ class TestTicketsEndpoint:
             "message": "Needs toner replacement",
             "priority": Priority.low.value
         }
-        
-        response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+
+        response = client.post("/ticket", json=ticket_data,
+                               headers=auth_user["headers"])
         assert response.status_code == 200
-        
+
         # Filter by topic
-        response = client.get("/tickets", params={"topic": Topic.printer.value})
-        
+        response = client.get(
+            "/tickets", params={"topic": Topic.printer.value})
+
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) >= 1
         for ticket in tickets:
             assert ticket["topic"] == Topic.printer.value
-    
+
     def test_read_tickets_pagination(self, client, auth_user):
         """Test ticket pagination"""
         # Create multiple tickets
@@ -265,16 +462,17 @@ class TestTicketsEndpoint:
                 "message": f"Test message {i}",
                 "priority": Priority.low.value
             }
-            response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+            response = client.post(
+                "/ticket", json=ticket_data, headers=auth_user["headers"])
             assert response.status_code == 200
-        
+
         # Test pagination
         response = client.get("/tickets", params={"skip": 2, "limit": 2})
-        
+
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) == 2
-    
+
     def test_read_tickets_filter_by_author(self, client, auth_user):
         """Test filtering tickets by author"""
         # Create a ticket
@@ -284,14 +482,15 @@ class TestTicketsEndpoint:
             "message": "Can't connect from my device",
             "priority": Priority.medium.value
         }
-        
-        create_response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+
+        create_response = client.post(
+            "/ticket", json=ticket_data, headers=auth_user["headers"])
         assert create_response.status_code == 200
         author_id = create_response.json()["author"]
-        
+
         # Filter by author
         response = client.get("/tickets", params={"author": author_id})
-        
+
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) >= 1
