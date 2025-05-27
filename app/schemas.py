@@ -61,7 +61,8 @@ class Ticket(TicketBase):
 
 
 class TicketPublic(Ticket):
-    pass
+    assigned_to_name: str | None
+    author_name: str
 
 
 class TicketUpdate(TicketBase):
