@@ -1,7 +1,7 @@
 from openai import OpenAI
 from dotenv import load_dotenv
 import os
-from models import Ticket
+from .models import Ticket
 from rich.console import Console
 from rich.progress import Progress
 from rich.markdown import Markdown
