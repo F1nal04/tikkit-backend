@@ -452,27 +452,6 @@ class TestTicketsEndpoint:
         for ticket in tickets:
             assert ticket["topic"] == Topic.printer.value
 
-    def test_read_tickets_pagination(self, client, auth_user):
-        """Test ticket pagination"""
-        # Create multiple tickets
-        for i in range(5):
-            ticket_data = {
-                "topic": Topic.other.value,
-                "description": f"Test ticket {i}",
-                "message": f"Test message {i}",
-                "priority": Priority.low.value
-            }
-            response = client.post(
-                "/ticket", json=ticket_data, headers=auth_user["headers"])
-            assert response.status_code == 200
-
-        # Test pagination
-        response = client.get("/tickets", params={"skip": 2, "limit": 2})
-
-        assert response.status_code == 200
-        tickets = response.json()
-        assert len(tickets) == 2
-
     def test_read_tickets_filter_by_author(self, client, auth_user):
         """Test filtering tickets by author"""
         # Create a ticket
@@ -496,3 +475,73 @@ class TestTicketsEndpoint:
         assert len(tickets) >= 1
         for ticket in tickets:
             assert ticket["author"] == author_id
+
+    def test_read_tickets_filter_by_multiple(self, client, auth_user):
+        """Test filtering tickets by multiple parameters"""
+        # Create a few tickets with different statuses, priorities, and topics
+        tickets_data = [
+            {
+                "topic": Topic.wifi.value,
+                "description": "WiFi issues",
+                "message": "Connection drops frequently",
+                "priority": Priority.medium.value
+            },
+            {
+                "topic": Topic.printer.value,
+                "description": "Printer offline",
+                "message": "Cannot print documents",
+                "priority": Priority.high.value
+            },
+            {
+                "topic": Topic.macbook.value,
+                "description": "MacBook screen flickering",
+                "message": "Screen flickers when opening certain applications",
+                "priority": Priority.high.value
+            },
+            {
+                "topic": Topic.nas.value,
+                "description": "NAS access issues",
+                "message": "Cannot access shared drives",
+                "priority": Priority.medium.value
+            }
+        ]
+
+        for ticket_data in tickets_data:
+            response = client.post(
+                "/ticket", json=ticket_data, headers=auth_user["headers"])
+            assert response.status_code == 200
+            author_id = response.json()["author"]
+
+        # Filter by multiple parameters
+        response = client.get("/tickets", params={"author": author_id, "status": Status.open.value,
+                              "priority": Priority.high.value, "topic": Topic.printer.value})
+
+        assert response.status_code == 200
+        tickets = response.json()
+        assert len(tickets) == 1
+        for ticket in tickets:
+            assert ticket["author"] == author_id
+            assert ticket["status"] == Status.open.value
+            assert ticket["priority"] == Priority.high.value
+            assert ticket["topic"] == Topic.printer.value
+
+    def test_read_tickets_pagination(self, client, auth_user):
+        """Test ticket pagination"""
+        # Create multiple tickets
+        for i in range(5):
+            ticket_data = {
+                "topic": Topic.other.value,
+                "description": f"Test ticket {i}",
+                "message": f"Test message {i}",
+                "priority": Priority.low.value
+            }
+            response = client.post(
+                "/ticket", json=ticket_data, headers=auth_user["headers"])
+            assert response.status_code == 200
+
+        # Test pagination
+        response = client.get("/tickets", params={"skip": 2, "limit": 2})
+
+        assert response.status_code == 200
+        tickets = response.json()
+        assert len(tickets) == 2
