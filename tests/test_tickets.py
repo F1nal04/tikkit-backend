@@ -650,7 +650,7 @@ class TestTicketsEndpoint:
         }
         
         response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid topic should return 422 but got {response.status_code}"
         
         # Invalid priority
         ticket_data = {
@@ -661,7 +661,7 @@ class TestTicketsEndpoint:
         }
         
         response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid priority should return 422 but got {response.status_code}"
 
     def test_update_ticket_partial_fields(self, client, admin_user):
         """Test partial ticket updates"""
@@ -732,23 +732,23 @@ class TestTicketsEndpoint:
         """Test tickets endpoint with invalid filter values"""
         # Invalid UUID for assigned_to
         response = client.get("/tickets", params={"assigned_to": "not-a-uuid"})
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid UUID for assigned_to should return 422 but got {response.status_code}"
         
         # Invalid UUID for author
         response = client.get("/tickets", params={"author": "not-a-uuid"})
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid UUID for author should return 422 but got {response.status_code}"
         
         # Invalid status
         response = client.get("/tickets", params={"status": "invalid_status"})
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid status should return 422 but got {response.status_code}"
         
         # Invalid priority
         response = client.get("/tickets", params={"priority": "invalid_priority"})
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid priority should return 422 but got {response.status_code}"
         
         # Invalid topic
         response = client.get("/tickets", params={"topic": "invalid_topic"})
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Invalid topic should return 422 but got {response.status_code}"
 
     def test_ticket_operations_invalid_uuid(self, client, admin_user):
         """Test ticket operations with invalid UUID format"""
@@ -756,21 +756,21 @@ class TestTicketsEndpoint:
         
         # GET ticket
         response = client.get(f"/ticket/{invalid_uuid}")
-        assert response.status_code == 422
+        assert response.status_code == 422, f"GET with invalid UUID should return 422 but got {response.status_code}"
         
         # PUT ticket
         update_data = {"description": "Updated"}
         response = client.put(f"/ticket/{invalid_uuid}", json=update_data, headers=admin_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"PUT with invalid UUID should return 422 but got {response.status_code}"
         
         # DELETE ticket
         response = client.delete(f"/ticket/{invalid_uuid}", headers=admin_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"DELETE with invalid UUID should return 422 but got {response.status_code}"
         
         # Assign ticket
         response = client.put(f"/ticket/{invalid_uuid}/assign", params={"assigned_to": admin_user["user_id"]}, headers=admin_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Assign with invalid UUID should return 422 but got {response.status_code}"
         
         # Update status
         response = client.put(f"/ticket/{invalid_uuid}/status", params={"status": Status.closed.value}, headers=admin_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Status update with invalid UUID should return 422 but got {response.status_code}"

@@ -114,7 +114,7 @@ class TestRegisterEndpoint:
         for email in invalid_emails:
             user_data = {**base_user, "email": email}
             response = client.post("/register", json=user_data)
-            assert response.status_code == 422, f"Email '{email}' should be invalid"
+            assert response.status_code == 422, f"Email '{email}' should be invalid but got status {response.status_code}"
 
     def test_register_field_length_validation(self, client):
         """Test field length boundary validation"""
@@ -156,7 +156,7 @@ class TestRegisterEndpoint:
                 "password": "ValidPass123!"
             }
             response = client.post("/register", json=user_data)
-            assert response.status_code == 200, f"Name '{name}' should be valid"
+            assert response.status_code == 200, f"Name '{name}' should be valid but got status {response.status_code}"
 
     def test_register_empty_vs_null_fields(self, client):
         """Test registration with empty vs null field values"""
@@ -167,7 +167,7 @@ class TestRegisterEndpoint:
             "password": ""
         }
         response = client.post("/register", json=user_data)
-        assert response.status_code == 422, f"String values should be unprocessable"
+        assert response.status_code == 422, f"Empty string values should be unprocessable but got status {response.status_code}"
 
         # None values
         user_data = {
@@ -176,7 +176,7 @@ class TestRegisterEndpoint:
             "password": None
         }
         response = client.post("/register", json=user_data)
-        assert response.status_code == 422, f"Null values should be unprocessable"
+        assert response.status_code == 422, f"Null values should be unprocessable but got status {response.status_code}"
 
 
 class TestTokenEndpoint:
@@ -306,7 +306,7 @@ class TestTokenEndpoint:
             "password": "password"
         }
         response = client.post("/token", data=login_data)
-        assert response.status_code in [400, 422]  # Should handle gracefully
+        assert response.status_code in [400, 422], f"Very long username should be handled gracefully but got status {response.status_code}"
 
         # Very long password
         long_password = "a" * 1000
@@ -315,7 +315,7 @@ class TestTokenEndpoint:
             "password": long_password
         }
         response = client.post("/token", data=login_data)
-        assert response.status_code in [400, 422]  # Should handle gracefully
+        assert response.status_code in [400, 422], f"Very long password should be handled gracefully but got status {response.status_code}"
 
 
 class TestAuthenticationFlow:

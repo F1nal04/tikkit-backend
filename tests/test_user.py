@@ -383,7 +383,7 @@ class TestUsers:
 
     def test_get_users_invalid_role_filter(self, client):
         response = client.get("/users", params={"role": "invalid_role"})
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422, f"Invalid role filter should return 422 but got {response.status_code}"
 
     def test_get_users_with_large_pagination(self, client):
         response = client.get("/users", params={"skip": 1000, "limit": 100})
@@ -410,11 +410,11 @@ class TestUsers:
         # Test various operations with invalid UUID
         update_data = {"name": "Test"}
         response = client.put(f"/user/{invalid_uuid}", json=update_data, headers=admin_user["headers"])
-        assert response.status_code == 422  # Validation error
+        assert response.status_code == 422, f"PUT with invalid UUID should return 422 but got {response.status_code}"
         
         response = client.delete(f"/user/{invalid_uuid}", headers=admin_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"DELETE with invalid UUID should return 422 but got {response.status_code}"
         
         password_data = {"old_password": "test", "new_password": "NewPass123!"}
         response = client.put(f"/user/{invalid_uuid}/password", json=password_data, headers=admin_user["headers"])
-        assert response.status_code == 422
+        assert response.status_code == 422, f"Password change with invalid UUID should return 422 but got {response.status_code}"
