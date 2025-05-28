@@ -5,5 +5,6 @@ PyJWT
 dotenv
 openai
 pytest
-httpx
+pytest-cov
 pytest-asyncio
+httpx
