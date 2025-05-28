@@ -1,13 +1,13 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
-import models
-import schemas
-import database
+from . import models
+from . import schemas
+from . import database
 from fastapi.security import OAuth2PasswordRequestForm
-from security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
+from .security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
 from sqlalchemy.exc import IntegrityError
-import ai
+from . import ai
 
 # Create the database tables
 models.Base.metadata.create_all(bind=database.engine)
@@ -46,7 +46,7 @@ app = FastAPI(
 
 
 @app.post("/register", tags=["auth"], response_model=schemas.Token)
-def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
+async def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
     if not check_password_strength(user.password):
         raise HTTPException(
             status_code=400, detail="Password must be at least 8 characters long and contain at least one number and one special character.")
@@ -68,7 +68,11 @@ def register(user: schemas.UserCreate, db: Session = Depends(database.get_db)):
 
 
 @app.post("/token", tags=["auth"], response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    form_data.username = form_data.username.strip()
+    form_data.username = form_data.username.lower()
+    form_data.password = form_data.password.strip()
+
     user = db.query(models.User).filter(
         models.User.email == form_data.username).first()
     if not user:
@@ -82,7 +86,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
 
 
 @app.post("/ticket", tags=["ticket"], response_model=schemas.TicketPublic)
-def create_ticket(ticket: schemas.TicketCreate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def create_ticket(ticket: schemas.TicketCreate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = models.Ticket(**ticket.model_dump())
     db_ticket.author = current_user.id
     db.add(db_ticket)
@@ -92,7 +96,7 @@ def create_ticket(ticket: schemas.TicketCreate, current_user: models.User = Depe
 
 
 @app.get("/ticket/{ticket_id}", tags=["ticket"], response_model=schemas.TicketPublic)
-def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
+async def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -100,7 +104,7 @@ def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
 
 
 @app.put("/ticket/{ticket_id}", tags=["ticket"], response_model=schemas.TicketPublic)
-def update_ticket(ticket_id: UUID, ticket: schemas.TicketUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def update_ticket(ticket_id: UUID, ticket: schemas.TicketUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -118,7 +122,7 @@ def update_ticket(ticket_id: UUID, ticket: schemas.TicketUpdate, current_user: m
 
 
 @app.delete("/ticket/{ticket_id}", tags=["ticket"])
-def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -132,7 +136,7 @@ def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get_curre
 
 
 @app.put("/ticket/{ticket_id}/assign", tags=["ticket"], response_model=schemas.TicketPublic)
-def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -147,7 +151,7 @@ def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models.User 
 
 
 @app.put("/ticket/{ticket_id}/status", tags=["ticket"], response_model=schemas.TicketPublic)
-def update_ticket_status(ticket_id: UUID, status: schemas.Status, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def update_ticket_status(ticket_id: UUID, status: schemas.Status, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -162,7 +166,7 @@ def update_ticket_status(ticket_id: UUID, status: schemas.Status, current_user: 
 
 
 @app.get("/tickets", tags=["tickets"], response_model=list[schemas.TicketPublic])
-def read_tickets(skip: int = 0, limit: int = 100, status: schemas.Status = None, priority: schemas.Priority = None, assigned_to: UUID = None, author: UUID = None, topic: schemas.Topic = None,  db: Session = Depends(database.get_db)):
+async def read_tickets(skip: int = 0, limit: int = 100, status: schemas.Status = None, priority: schemas.Priority = None, assigned_to: UUID = None, author: UUID = None, topic: schemas.Topic = None,  db: Session = Depends(database.get_db)):
     query = db.query(models.Ticket)
 
     if status:
@@ -182,7 +186,7 @@ def read_tickets(skip: int = 0, limit: int = 100, status: schemas.Status = None,
 
 
 @app.get("/ai_request/{ticket_id}", tags=["ai"])
-def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == schemas.Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -193,7 +197,7 @@ def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depends(get
 
 
 @app.get("/user", tags=["user"], response_model=schemas.UserPublic)
-def get_user(user_id: UUID | None = None,  current_user: models.User | None = Depends(get_current_active_user_optional), db: Session = Depends(database.get_db)):
+async def get_user(user_id: UUID | None = None,  current_user: models.User | None = Depends(get_current_active_user_optional), db: Session = Depends(database.get_db)):
     if not user_id:
         if not current_user:
             raise HTTPException(
@@ -207,7 +211,7 @@ def get_user(user_id: UUID | None = None,  current_user: models.User | None = De
 
 
 @app.put("/user/{user_id}", tags=["user"], response_model=schemas.UserPublic)
-def update_user(user_id: UUID, user: schemas.UserUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def update_user(user_id: UUID, user: schemas.UserUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == schemas.Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -227,7 +231,7 @@ def update_user(user_id: UUID, user: schemas.UserUpdate, current_user: models.Us
 
 
 @app.delete("/user/{user_id}", tags=["user"])
-def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == schemas.Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -259,7 +263,7 @@ def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_a
 
 
 @app.put("/user/{user_id}/password", tags=["user"])
-def change_password(password: schemas.PasswordChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def change_password(password: schemas.PasswordChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == schemas.Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -280,7 +284,7 @@ def change_password(password: schemas.PasswordChange, user_id: UUID, current_use
 
 
 @app.put("/user/{user_id}/email", tags=["user"], response_model=schemas.UserPublic)
-def change_email(email: schemas.EmailChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def change_email(email: schemas.EmailChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == schemas.Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -302,7 +306,7 @@ def change_email(email: schemas.EmailChange, user_id: UUID, current_user: models
 
 
 @app.put("/user/{user_id}/role", tags=["user"])
-def change_role(user_id: UUID, role: schemas.RoleChange, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def change_role(user_id: UUID, role: schemas.RoleChange, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == schemas.Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -320,7 +324,7 @@ def change_role(user_id: UUID, role: schemas.RoleChange, current_user: models.Us
 
 
 @app.get("/users", tags=["users"], response_model=list[schemas.UserPublic])
-def get_users(skip: int = 0, limit: int = 100, role: schemas.Role | None = None, db: Session = Depends(database.get_db)):
+async def get_users(skip: int = 0, limit: int = 100, role: schemas.Role | None = None, db: Session = Depends(database.get_db)):
     query = db.query(models.User)
     if role:
         query = query.filter(models.User.role == role)

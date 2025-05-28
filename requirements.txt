@@ -4,3 +4,7 @@ argon2-cffi
 PyJWT
 dotenv
 openai
+pytest
+pytest-cov
+pytest-asyncio
+httpx

@@ -154,9 +154,78 @@ Once the server is running, you can access:
 
 ### Running Tests
 
+The project includes comprehensive integration tests covering all API endpoints and functionality.
+
 ```bash
-# Example ticket creation script
-python test/send_ticket_requests.py
+# Run all tests
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run specific test file
+pytest tests/test_auth.py
+pytest tests/test_tickets.py
+pytest tests/test_user.py
+
+# Run tests with coverage report
+pytest --cov=app
+```
+
+### Test Suite Overview
+
+The test suite consists of three main test files providing comprehensive coverage:
+
+#### Authentication Tests (`tests/test_auth.py`)
+
+- **Registration Tests**: User registration with validation, password strength, duplicate emails, field validation
+- **Login Tests**: Authentication, wrong credentials, case sensitivity, long credential handling
+- **Edge Cases**: Empty fields, null values, special characters in names, extremely long inputs
+- **Security Tests**: Password complexity validation, email format validation
+
+#### Ticket Management Tests (`tests/test_tickets.py`)
+
+- **CRUD Operations**: Create, read, update, delete tickets with proper authentication
+- **Role-Based Access**: Admin vs non-admin permissions for ticket modifications
+- **Assignment System**: Ticket assignment workflows, self-assignment rules
+- **Status Management**: Status updates by different user roles (admin, author, assignee)
+- **Filtering & Pagination**: Filter tickets by status, priority, topic, author, assignee
+- **Validation Tests**: Invalid enum values, malformed UUIDs, invalid filter parameters
+- **Edge Cases**: Non-existent tickets, unauthorized operations, partial updates
+
+#### User Management Tests (`tests/test_user.py`)
+
+- **Profile Management**: Get user profiles, update user information, partial updates
+- **Password Management**: Password changes with proper validation and admin overrides
+- **Email Management**: Email updates with password verification
+- **Role Management**: Admin-only role changes with protection for admin users
+- **User Deletion**: Deletion validation with ticket dependency checks
+- **User Listing**: User filtering by role with pagination support
+- **Security Tests**: Unauthorized access prevention, invalid UUID handling
+
+### Test Features
+
+- **Comprehensive Coverage**: All endpoints and edge cases covered
+- **Authentication Testing**: Proper JWT token handling and role-based access
+- **Detailed Assertions**: Descriptive error messages for easy debugging
+- **Database Isolation**: Each test uses a fresh database state
+- **Fixture-Based Setup**: Reusable authenticated user fixtures
+- **Validation Testing**: Input validation and error handling verification
+
+### Example Test Command Usage
+
+```bash
+# Run auth tests only
+pytest tests/test_auth.py -v
+
+# Run ticket tests with specific pattern
+pytest tests/test_tickets.py::TestTicketEndpoint::test_create_ticket_success -v
+
+# Run user management tests
+pytest tests/test_user.py -v
+
+# Get test coverage report
+pytest --cov=app --cov-report=html
 ```
 
 ### Database

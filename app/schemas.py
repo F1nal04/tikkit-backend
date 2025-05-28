@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator, EmailStr
 from datetime import datetime
 from uuid import UUID
 from enum import Enum
@@ -75,12 +75,26 @@ class TicketUpdate(TicketBase):
 
 
 class UserBase(BaseModel):
-    email: str
+    email: EmailStr
     name: str
+
+    @field_validator('name')
+    @classmethod
+    def validate_name_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Name cannot be empty')
+        return v
 
 
 class UserCreate(UserBase):
     password: str
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_not_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError('Password cannot be empty')
+        return v
 
 
 class User(UserBase):
