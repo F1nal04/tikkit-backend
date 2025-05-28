@@ -69,6 +69,10 @@ async def register(user: schemas.UserCreate, db: Session = Depends(database.get_
 
 @app.post("/token", tags=["auth"], response_model=schemas.Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    form_data.username = form_data.username.strip()
+    form_data.username = form_data.username.lower()
+    form_data.password = form_data.password.strip()
+
     user = db.query(models.User).filter(
         models.User.email == form_data.username).first()
     if not user:

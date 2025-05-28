@@ -1,5 +1,6 @@
 import pytest
 from app.schemas import Priority, Topic, Status
+from uuid import uuid4
 
 
 class TestTicketEndpoint:
@@ -545,3 +546,231 @@ class TestTicketsEndpoint:
         assert response.status_code == 200
         tickets = response.json()
         assert len(tickets) == 2
+
+    def test_assign_ticket_to_nonexistent_user(self, client, admin_user):
+        """Test assigning ticket to non-existent user"""
+        # Create a ticket
+        ticket_data = {
+            "topic": Topic.wifi.value,
+            "description": "WiFi issue",
+            "message": "Need assignment",
+            "priority": Priority.medium.value
+        }
+        
+        create_response = client.post("/ticket", json=ticket_data, headers=admin_user["headers"])
+        ticket_id = create_response.json()["id"]
+        
+        # Try to assign to fake user ID
+        fake_user_id = str(uuid4())
+        assign_response = client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": fake_user_id},
+            headers=admin_user["headers"]
+        )
+        
+        # Should succeed (no user validation in assignment)
+        assert assign_response.status_code == 200
+        assert assign_response.json()["assigned_to"] == fake_user_id
+
+    def test_assign_ticket_already_assigned_non_admin(self, client, auth_user, admin_user):
+        """Test non-admin trying to reassign already assigned ticket"""
+        # Create and assign ticket
+        ticket_data = {
+            "topic": Topic.printer.value,
+            "description": "Printer issue",
+            "message": "Already assigned",
+            "priority": Priority.high.value
+        }
+        
+        create_response = client.post("/ticket", json=ticket_data, headers=admin_user["headers"])
+        ticket_id = create_response.json()["id"]
+        
+        # Admin assigns to themselves
+        client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": admin_user["user_id"]},
+            headers=admin_user["headers"]
+        )
+        
+        # Non-admin tries to reassign to themselves
+        user_response = client.get("/user", headers=auth_user["headers"])
+        user_id = user_response.json()["id"]
+        
+        assign_response = client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": user_id},
+            headers=auth_user["headers"]
+        )
+        
+        # Should fail (ticket already assigned and user is not admin)
+        assert assign_response.status_code == 403
+        assert "Not enough permissions" in assign_response.json()["detail"]
+
+    def test_update_ticket_status_assigned_user(self, client, auth_user, admin_user):
+        """Test status update by assigned user"""
+        # Create ticket
+        ticket_data = {
+            "topic": Topic.macbook.value,
+            "description": "MacBook repair",
+            "message": "Hardware issue",
+            "priority": Priority.high.value
+        }
+        
+        create_response = client.post("/ticket", json=ticket_data, headers=admin_user["headers"])
+        ticket_id = create_response.json()["id"]
+        
+        # Assign to auth_user
+        user_response = client.get("/user", headers=auth_user["headers"])
+        user_id = user_response.json()["id"]
+        
+        client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": user_id},
+            headers=admin_user["headers"]
+        )
+        
+        # Assigned user updates status
+        status_response = client.put(
+            f"/ticket/{ticket_id}/status",
+            params={"status": Status.in_progress.value},
+            headers=auth_user["headers"]
+        )
+        
+        assert status_response.status_code == 200
+        assert status_response.json()["status"] == Status.in_progress.value
+
+    def test_create_ticket_invalid_enum_values(self, client, auth_user):
+        """Test ticket creation with invalid enum values"""
+        # Invalid topic
+        ticket_data = {
+            "topic": "invalid_topic",
+            "description": "Test ticket",
+            "message": "Test message",
+            "priority": Priority.medium.value
+        }
+        
+        response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+        assert response.status_code == 422
+        
+        # Invalid priority
+        ticket_data = {
+            "topic": Topic.wifi.value,
+            "description": "Test ticket",
+            "message": "Test message",
+            "priority": "invalid_priority"
+        }
+        
+        response = client.post("/ticket", json=ticket_data, headers=auth_user["headers"])
+        assert response.status_code == 422
+
+    def test_update_ticket_partial_fields(self, client, admin_user):
+        """Test partial ticket updates"""
+        # Create ticket
+        ticket_data = {
+            "topic": Topic.nas.value,
+            "description": "Original description",
+            "message": "Original message",
+            "priority": Priority.low.value
+        }
+        
+        create_response = client.post("/ticket", json=ticket_data, headers=admin_user["headers"])
+        ticket_id = create_response.json()["id"]
+        original_ticket = create_response.json()
+        
+        # Update only description
+        update_data = {"description": "Updated description only"}
+        
+        update_response = client.put(
+            f"/ticket/{ticket_id}", 
+            json=update_data, 
+            headers=admin_user["headers"]
+        )
+        
+        assert update_response.status_code == 200
+        updated_ticket = update_response.json()
+        
+        # Check updated field
+        assert updated_ticket["description"] == "Updated description only"
+        
+        # Check unchanged fields
+        assert updated_ticket["message"] == original_ticket["message"]
+        assert updated_ticket["priority"] == original_ticket["priority"]
+        assert updated_ticket["topic"] == original_ticket["topic"]
+
+    def test_tickets_filter_by_assigned_to(self, client, auth_user, admin_user):
+        """Test filtering tickets by assigned_to"""
+        # Create and assign ticket to auth_user
+        ticket_data = {
+            "topic": Topic.lan.value,
+            "description": "Network issue",
+            "message": "Assigned to specific user",
+            "priority": Priority.medium.value
+        }
+        
+        create_response = client.post("/ticket", json=ticket_data, headers=admin_user["headers"])
+        ticket_id = create_response.json()["id"]
+        
+        user_response = client.get("/user", headers=auth_user["headers"])
+        user_id = user_response.json()["id"]
+        
+        client.put(
+            f"/ticket/{ticket_id}/assign",
+            params={"assigned_to": user_id},
+            headers=admin_user["headers"]
+        )
+        
+        # Filter by assigned_to
+        response = client.get("/tickets", params={"assigned_to": user_id})
+        
+        assert response.status_code == 200
+        tickets = response.json()
+        assert len(tickets) >= 1
+        for ticket in tickets:
+            assert ticket["assigned_to"] == user_id
+
+    def test_tickets_invalid_filter_values(self, client):
+        """Test tickets endpoint with invalid filter values"""
+        # Invalid UUID for assigned_to
+        response = client.get("/tickets", params={"assigned_to": "not-a-uuid"})
+        assert response.status_code == 422
+        
+        # Invalid UUID for author
+        response = client.get("/tickets", params={"author": "not-a-uuid"})
+        assert response.status_code == 422
+        
+        # Invalid status
+        response = client.get("/tickets", params={"status": "invalid_status"})
+        assert response.status_code == 422
+        
+        # Invalid priority
+        response = client.get("/tickets", params={"priority": "invalid_priority"})
+        assert response.status_code == 422
+        
+        # Invalid topic
+        response = client.get("/tickets", params={"topic": "invalid_topic"})
+        assert response.status_code == 422
+
+    def test_ticket_operations_invalid_uuid(self, client, admin_user):
+        """Test ticket operations with invalid UUID format"""
+        invalid_uuid = "not-a-uuid"
+        
+        # GET ticket
+        response = client.get(f"/ticket/{invalid_uuid}")
+        assert response.status_code == 422
+        
+        # PUT ticket
+        update_data = {"description": "Updated"}
+        response = client.put(f"/ticket/{invalid_uuid}", json=update_data, headers=admin_user["headers"])
+        assert response.status_code == 422
+        
+        # DELETE ticket
+        response = client.delete(f"/ticket/{invalid_uuid}", headers=admin_user["headers"])
+        assert response.status_code == 422
+        
+        # Assign ticket
+        response = client.put(f"/ticket/{invalid_uuid}/assign", params={"assigned_to": admin_user["user_id"]}, headers=admin_user["headers"])
+        assert response.status_code == 422
+        
+        # Update status
+        response = client.put(f"/ticket/{invalid_uuid}/status", params={"status": Status.closed.value}, headers=admin_user["headers"])
+        assert response.status_code == 422
