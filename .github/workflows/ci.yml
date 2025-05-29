@@ -9,8 +9,10 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  integration-tests:
     runs-on: ubuntu-latest
+    env:
+      JWT_KEY: ${{ secrets.JWT_KEY }}
 
     steps:
       - name: Checkout code
