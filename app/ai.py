@@ -1,4 +1,3 @@
-from openai import OpenAI
 from dotenv import load_dotenv
 import os
 from .models import Ticket
@@ -9,7 +8,16 @@ from rich.markdown import Markdown
 load_dotenv()
 
 api_key = os.getenv("OPENAI_KEY")
-client = OpenAI(api_key=api_key)
+
+# Only initialize OpenAI client if API key is available
+client = None
+if api_key:
+    try:
+        from openai import OpenAI
+        client = OpenAI(api_key=api_key)
+    except ImportError:
+        # Handle case where openai package might not be installed
+        client = None
 
 
 def generate_instructions(ticket: Ticket) -> str:
@@ -51,6 +59,10 @@ def generate_prompt(ticket: Ticket) -> str:
 
 
 def get_response(ticket: Ticket):
+    if not client:
+        raise RuntimeError(
+            "OpenAI client is not available. Please set OPENAI_KEY environment variable.")
+
     instructions = generate_instructions(ticket)
     prompt = generate_prompt(ticket)
     response = client.responses.create(
@@ -61,7 +73,16 @@ def get_response(ticket: Ticket):
     return response.output_text
 
 
+def is_ai_available() -> bool:
+    """Check if AI functionality is available."""
+    return client is not None
+
+
 if __name__ == "__main__":
+    if not client:
+        print("Error: OpenAI API key not configured. Please set OPENAI_KEY environment variable.")
+        exit(1)
+
     console = Console()
     progress = Progress()
     response = None

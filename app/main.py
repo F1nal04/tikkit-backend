@@ -190,10 +190,20 @@ async def get_ticket_solution(ticket_id: UUID, current_user: models.User = Depen
     if not current_user.role == schemas.Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    if not ai.is_ai_available():
+        raise HTTPException(
+            status_code=503,
+            detail="AI service is not available. OpenAI API key is not configured."
+        )
+
     ticket = db.get(models.Ticket, ticket_id)
     if not ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
-    return ai.get_response(ticket)
+
+    try:
+        return ai.get_response(ticket)
+    except RuntimeError as e:
+        raise HTTPException(status_code=503, detail=str(e))
 
 
 @app.get("/user", tags=["user"], response_model=schemas.UserPublic)
