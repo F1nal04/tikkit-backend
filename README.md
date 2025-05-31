@@ -10,6 +10,7 @@ A comprehensive REST API for managing IT support tickets built with FastAPI and 
 - 🤖 **AI Integration**: AI-powered ticket solution suggestions
 - 📊 **Advanced Filtering**: Filter tickets by status, priority, topic, assignee, and author
 - 🔒 **Secure Authentication**: JWT tokens with Argon2 password hashing
+- 📋 **Audit Trail**: Complete history tracking of all ticket changes
 
 ## Setup
 
@@ -92,6 +93,12 @@ Once the server is running, you can access:
 - `imac` - iMac issues
 - `other` - Other IT issues
 
+### Change Types (History)
+
+- `created` - Initial ticket creation
+- `updated` - Field modifications
+- `deleted` - Ticket deletion
+
 ## API Endpoints
 
 ### Authentication
@@ -103,11 +110,16 @@ Once the server is running, you can access:
 
 - `POST /ticket` - Create a new ticket (authenticated users)
 - `GET /ticket/{ticket_id}` - Get a specific ticket
+- `GET /ticket/{ticket_id}/with-history` - Get a ticket with complete change history
 - `PUT /ticket/{ticket_id}` - Update a ticket (admin only)
 - `DELETE /ticket/{ticket_id}` - Delete a ticket (admin only)
 - `PUT /ticket/{ticket_id}/assign` - Assign ticket to user
 - `PUT /ticket/{ticket_id}/status` - Update ticket status
 - `GET /tickets` - List tickets with filtering options
+
+### Ticket History
+
+- `GET /ticket/{ticket_id}/history` - Get complete change history for a ticket
 
 ### Users
 
@@ -252,3 +264,31 @@ The application uses SQLite by default with SQLAlchemy ORM. Database tables are 
 ## License
 
 This project is licensed under the MIT License.
+
+## History Tracking
+
+The system automatically tracks all changes made to tickets, providing a complete audit trail. History entries include:
+
+- **Field Changes**: What field was modified (e.g., status, priority, description)
+- **Old/New Values**: Previous and new values with user-friendly formatting
+- **User Information**: Who made the change (with user names)
+- **Timestamps**: When the change occurred (UTC)
+- **Change Types**: Creation, updates, or deletion
+
+### Tracked Fields
+
+- Topic changes
+- Description modifications
+- Message updates
+- Status changes
+- Priority adjustments
+- Assignment changes
+- Ticket creation and deletion
+
+### History Features
+
+- **Automatic Tracking**: All changes are automatically recorded
+- **User-Friendly Display**: User IDs are converted to names for readability
+- **Chronological Order**: History entries are ordered newest first
+- **Complete Audit Trail**: No changes go unrecorded
+- **Persistent History**: History is preserved even after ticket deletion
