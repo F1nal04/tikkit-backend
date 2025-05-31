@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator, EmailStr
+from pydantic import BaseModel, field_validator, EmailStr, ConfigDict
 from datetime import datetime
 from uuid import UUID
 from enum import Enum
@@ -35,12 +35,40 @@ class Role(Enum):
     deactivated = "deactivated"
 
 
+class ChangeType(Enum):
+    created = "created"
+    updated = "updated"
+    deleted = "deleted"
+
+
 class Token(BaseModel):
     access_token: str
     token_type: str
 
 
+class TicketHistoryBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    field_name: str
+    old_value: str | None
+    new_value: str | None
+    change_type: ChangeType
+
+
+class TicketHistory(TicketHistoryBase):
+    id: UUID
+    ticket_id: UUID
+    changed_by: UUID
+    changed_at: datetime
+
+
+class TicketHistoryPublic(TicketHistory):
+    changed_by_name: str
+
+
 class TicketBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     topic: Topic
     description: str
     message: str | None
@@ -65,6 +93,10 @@ class TicketPublic(Ticket):
     author_name: str
 
 
+class TicketWithHistory(TicketPublic):
+    history: list[TicketHistoryPublic] = []
+
+
 class TicketUpdate(TicketBase):
     topic: Topic | None = None
     description: str | None = None
@@ -75,6 +107,8 @@ class TicketUpdate(TicketBase):
 
 
 class UserBase(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     email: EmailStr
     name: str
 

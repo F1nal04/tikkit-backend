@@ -4,6 +4,7 @@ from uuid import UUID
 from . import models
 from . import schemas
 from . import database
+from . import history
 from fastapi.security import OAuth2PasswordRequestForm
 from .security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
 from sqlalchemy.exc import IntegrityError
@@ -40,6 +41,10 @@ app = FastAPI(
         {
             "name": "ai",
             "description": "Operations for ai purposes. The **ai** endpoint allows you to create requests to the ai.",
+        },
+        {
+            "name": "history",
+            "description": "Operations for ticket history. The **history** endpoints allow you to view ticket change history.",
         }
     ]
 )
@@ -92,6 +97,11 @@ async def create_ticket(ticket: schemas.TicketCreate, current_user: models.User 
     db.add(db_ticket)
     db.commit()
     db.refresh(db_ticket)
+
+    # Record ticket creation in history
+    history.record_ticket_creation(db, db_ticket, current_user.id)
+    db.commit()
+
     return db_ticket
 
 
@@ -103,6 +113,43 @@ async def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
     return db_ticket
 
 
+@app.get("/ticket/{ticket_id}/history", tags=["history"], response_model=list[schemas.TicketHistoryPublic])
+async def get_ticket_history(ticket_id: UUID, db: Session = Depends(database.get_db)):
+    """Get the complete history of changes for a specific ticket."""
+    # Verify ticket exists
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Get history entries ordered by date (newest first)
+    history_entries = db.query(models.TicketHistory).filter(
+        models.TicketHistory.ticket_id == ticket_id
+    ).order_by(models.TicketHistory.changed_at.desc()).all()
+
+    return history_entries
+
+
+@app.get("/ticket/{ticket_id}/with-history", tags=["ticket"], response_model=schemas.TicketWithHistory)
+async def read_ticket_with_history(ticket_id: UUID, db: Session = Depends(database.get_db)):
+    """Get a ticket along with its complete change history."""
+    db_ticket = db.get(models.Ticket, ticket_id)
+    if not db_ticket:
+        raise HTTPException(status_code=404, detail="Ticket not found")
+
+    # Get history entries
+    history_entries = db.query(models.TicketHistory).filter(
+        models.TicketHistory.ticket_id == ticket_id
+    ).order_by(models.TicketHistory.changed_at.desc()).all()
+
+    # Convert to response model
+    ticket_data = schemas.TicketPublic.model_validate(db_ticket)
+    return schemas.TicketWithHistory(
+        **ticket_data.model_dump(),
+        history=[schemas.TicketHistoryPublic.model_validate(
+            entry) for entry in history_entries]
+    )
+
+
 @app.put("/ticket/{ticket_id}", tags=["ticket"], response_model=schemas.TicketPublic)
 async def update_ticket(ticket_id: UUID, ticket: schemas.TicketUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     db_ticket = db.get(models.Ticket, ticket_id)
@@ -112,7 +159,25 @@ async def update_ticket(ticket_id: UUID, ticket: schemas.TicketUpdate, current_u
     if not current_user.role == schemas.Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    # Store old ticket state for history tracking
+    old_ticket_copy = models.Ticket(
+        id=db_ticket.id,
+        topic=db_ticket.topic,
+        description=db_ticket.description,
+        message=db_ticket.message,
+        status=db_ticket.status,
+        priority=db_ticket.priority,
+        assigned_to=db_ticket.assigned_to,
+        author=db_ticket.author
+    )
+
     update_data = ticket.model_dump(exclude_unset=True)
+
+    # Record changes in history before applying them
+    history.record_ticket_changes(
+        db, ticket_id, old_ticket_copy, update_data, current_user.id)
+
+    # Apply the changes
     for field, value in update_data.items():
         setattr(db_ticket, field, value)
 
@@ -130,6 +195,9 @@ async def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get
     if not current_user.role == schemas.Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
+    # Record deletion in history before deleting
+    history.record_ticket_deletion(db, ticket_id, current_user.id)
+
     db.delete(db_ticket)
     db.commit()
     return {"message": "Ticket deleted successfully"}
@@ -143,6 +211,11 @@ async def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models
 
     if not ((current_user.role == schemas.Role.admin) or (current_user.id == assigned_to and db_ticket.assigned_to is None)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Record assignment change in history
+    old_assigned_to = db_ticket.assigned_to
+    history.record_ticket_assignment(
+        db, ticket_id, old_assigned_to, assigned_to, current_user.id)
 
     db_ticket.assigned_to = assigned_to
     db.commit()
@@ -158,6 +231,11 @@ async def update_ticket_status(ticket_id: UUID, status: schemas.Status, current_
 
     if not ((current_user.role == schemas.Role.admin) or (current_user.id == db_ticket.author and status == schemas.Status.closed) or (current_user.id == db_ticket.assigned_to)):
         raise HTTPException(status_code=403, detail="Not enough permissions")
+
+    # Record status change in history
+    old_status = db_ticket.status
+    history.record_ticket_status_change(
+        db, ticket_id, old_status, status, current_user.id)
 
     db_ticket.status = status
     db.commit()
