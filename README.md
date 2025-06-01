@@ -1,4 +1,4 @@
-![Version](https://img.shields.io/badge/version-0.0.11-blue.svg)
+![Version](https://img.shields.io/badge/version-0.0.12-blue.svg)
 
 # Tikkit Backend
 
