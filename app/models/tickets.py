@@ -32,6 +32,10 @@ class Ticket(Base):
     created_at = Column(Date, default=date.today)
     updated_at = Column(Date, default=date.today, onupdate=date.today)
 
+    # Relationship to history entries
+    history = relationship(
+        "TicketHistory", back_populates="ticket", cascade="all, delete-orphan")
+
     @property
     def author_name(self):
         """Get the name of the ticket author."""

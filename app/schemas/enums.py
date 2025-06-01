@@ -41,3 +41,10 @@ class Role(Enum):
     user = "user"
     inactive = "inactive"
     deactivated = "deactivated"
+
+
+class ChangeType(Enum):
+    """Ticket history change type enumeration."""
+    created = "created"
+    updated = "updated"
+    deleted = "deleted"

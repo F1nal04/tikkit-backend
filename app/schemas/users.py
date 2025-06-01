@@ -5,7 +5,7 @@ Contains Pydantic models for user creation, updates, and responses.
 Includes validation for user data integrity.
 """
 
-from pydantic import BaseModel, field_validator, EmailStr
+from pydantic import BaseModel, field_validator, EmailStr, ConfigDict
 from datetime import datetime
 from uuid import UUID
 from .enums import Role
@@ -13,6 +13,8 @@ from .enums import Role
 
 class UserBase(BaseModel):
     """Base user schema with common fields."""
+    model_config = ConfigDict(from_attributes=True)
+
     email: EmailStr
     name: str
 

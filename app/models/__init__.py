@@ -9,9 +9,11 @@ throughout the application.
 from .base import Base
 from .users import User
 from .tickets import Ticket
+from .history import TicketHistory
 
 __all__ = [
     "Base",
     "User",
     "Ticket",
+    "TicketHistory",
 ]

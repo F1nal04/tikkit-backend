@@ -4,37 +4,34 @@ from uuid import UUID
 
 from ..core import database
 from ..core.security import get_current_active_user_optional, get_current_active_user, verify_password, get_password_hash
-from ..schemas.enums import Role
-from ..schemas.auth import PasswordChange, EmailChange, RoleChange
-from ..schemas.users import UserPublic, UserUpdate
-from ..models.users import User
-from ..models.tickets import Ticket
+from ..schemas import UserPublic, UserUpdate, PasswordChange, EmailChange, RoleChange, Role
+from .. import models
 
 router = APIRouter(prefix="", tags=["user", "users"])
 
 
 @router.get("/user", tags=["user"], response_model=UserPublic)
-async def get_user(user_id: UUID | None = None,  current_user: User | None = Depends(get_current_active_user_optional), db: Session = Depends(database.get_db)):
+async def get_user(user_id: UUID | None = None,  current_user: models.User | None = Depends(get_current_active_user_optional), db: Session = Depends(database.get_db)):
     if not user_id:
         if not current_user:
             raise HTTPException(
                 status_code=400, detail="No user_id provided and no authenticated user.")
-        user = db.get(User, current_user.id)
+        user = db.get(models.User, current_user.id)
     else:
-        user = db.get(User, user_id)
+        user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     return user
 
 
 @router.put("/user/{user_id}", tags=["user"], response_model=UserPublic)
-async def update_user(user_id: UUID, user: UserUpdate, current_user: User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def update_user(user_id: UUID, user: UserUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
                 status_code=403, detail="Not enough permissions")
 
-    db_user = db.get(User, user_id)
+    db_user = db.get(models.User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -48,26 +45,26 @@ async def update_user(user_id: UUID, user: UserUpdate, current_user: User = Depe
 
 
 @router.delete("/user/{user_id}", tags=["user"])
-async def delete_user(user_id: UUID, current_user: User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
                 status_code=403, detail="Not enough permissions")
 
-    db_user = db.get(User, user_id)
+    db_user = db.get(models.User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    tickets_as_author = db.query(Ticket).filter(
-        Ticket.author == user_id).count()
+    tickets_as_author = db.query(models.Ticket).filter(
+        models.Ticket.author == user_id).count()
     if tickets_as_author > 0:
         raise HTTPException(
             status_code=400,
             detail=f"Cannot delete user: user has {tickets_as_author} tickets as author. Please reassign or delete these tickets first."
         )
 
-    tickets_assigned = db.query(Ticket).filter(
-        Ticket.assigned_to == user_id).count()
+    tickets_assigned = db.query(models.Ticket).filter(
+        models.Ticket.assigned_to == user_id).count()
     if tickets_assigned > 0:
         raise HTTPException(
             status_code=400,
@@ -80,13 +77,13 @@ async def delete_user(user_id: UUID, current_user: User = Depends(get_current_ac
 
 
 @router.put("/user/{user_id}/password", tags=["user"])
-async def change_password(password: PasswordChange, user_id: UUID, current_user: User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def change_password(password: PasswordChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
                 status_code=403, detail="Not enough permissions")
 
-    db_user = db.get(User, user_id)
+    db_user = db.get(models.User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -101,13 +98,13 @@ async def change_password(password: PasswordChange, user_id: UUID, current_user:
 
 
 @router.put("/user/{user_id}/email", tags=["user"], response_model=UserPublic)
-async def change_email(email: EmailChange, user_id: UUID, current_user: User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def change_email(email: EmailChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
                 status_code=403, detail="Not enough permissions")
 
-    db_user = db.get(User, user_id)
+    db_user = db.get(models.User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -123,11 +120,11 @@ async def change_email(email: EmailChange, user_id: UUID, current_user: User = D
 
 
 @router.put("/user/{user_id}/role", tags=["user"])
-async def change_role(user_id: UUID, role: RoleChange, current_user: User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+async def change_role(user_id: UUID, role: RoleChange, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
     if not current_user.role == Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
-    db_user = db.get(User, user_id)
+    db_user = db.get(models.User, user_id)
     if not db_user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -142,10 +139,10 @@ async def change_role(user_id: UUID, role: RoleChange, current_user: User = Depe
 
 @router.get("/users", tags=["users"], response_model=list[UserPublic])
 async def get_users(skip: int = 0, limit: int = 100, role: Role | None = None, db: Session = Depends(database.get_db)):
-    query = db.query(User)
+    query = db.query(models.User)
     if role:
-        query = query.filter(User.role == role)
+        query = query.filter(models.User.role == role)
 
-    users = query.order_by(User.created_at.desc()).offset(
+    users = query.order_by(models.User.created_at.desc()).offset(
         skip).limit(limit).all()
     return users

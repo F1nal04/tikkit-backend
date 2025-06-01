@@ -5,9 +5,8 @@ from sqlalchemy.exc import IntegrityError
 
 from ..core import database
 from ..core.security import verify_password, create_access_token, get_password_hash, check_password_strength
-from ..schemas.auth import Token
-from ..schemas.users import UserCreate
-from ..models.users import User
+from ..schemas import Token, UserCreate
+from .. import models
 
 router = APIRouter(prefix="", tags=["auth"])
 
@@ -20,7 +19,7 @@ async def register(user: UserCreate, db: Session = Depends(database.get_db)):
     hashed_password = get_password_hash(user.password)
     user_data = user.model_dump(exclude={'password'})
 
-    db_user = User(**user_data)
+    db_user = models.User(**user_data)
     db_user.hashed_password = hashed_password
 
     db.add(db_user)
@@ -40,8 +39,8 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = 
     form_data.username = form_data.username.lower()
     form_data.password = form_data.password.strip()
 
-    user = db.query(User).filter(
-        User.email == form_data.username).first()
+    user = db.query(models.User).filter(
+        models.User.email == form_data.username).first()
     if not user:
         raise HTTPException(
             status_code=400, detail="Incorrect email or password")

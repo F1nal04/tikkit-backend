@@ -6,10 +6,11 @@ and serialization throughout the application.
 """
 
 # Import all schemas to maintain backward compatibility
-from .enums import Status, Priority, Topic, Role
+from .enums import Status, Priority, Topic, Role, ChangeType
 from .auth import Token, PasswordChange, EmailChange, RoleChange
 from .users import UserBase, UserCreate, User, UserPublic, UserUpdate
-from .tickets import TicketBase, TicketCreate, Ticket, TicketPublic, TicketUpdate
+from .tickets import TicketBase, TicketCreate, Ticket, TicketPublic, TicketUpdate, TicketWithHistory
+from .history import TicketHistoryBase, TicketHistory, TicketHistoryPublic
 
 __all__ = [
     # Enums
@@ -17,6 +18,7 @@ __all__ = [
     "Priority",
     "Topic",
     "Role",
+    "ChangeType",
     # Auth schemas
     "Token",
     "PasswordChange",
@@ -34,4 +36,9 @@ __all__ = [
     "Ticket",
     "TicketPublic",
     "TicketUpdate",
+    "TicketWithHistory",
+    # History schemas
+    "TicketHistoryBase",
+    "TicketHistory",
+    "TicketHistoryPublic",
 ]

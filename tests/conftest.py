@@ -55,10 +55,14 @@ def auth_user(client):
     response = client.post("/register", json=user_data)
     assert response.status_code == 200
 
+    # Get user ID from token
     token = response.json()["access_token"]
+    decoded_token = jwt.decode(token, options={"verify_signature": False})
+    user_id = decoded_token["sub"]
+
     headers = {"Authorization": f"Bearer {token}"}
 
-    return {"headers": headers, "user_data": user_data, "token": token}
+    return {"headers": headers, "user_data": user_data, "token": token, "user_id": user_id}
 
 
 @pytest.fixture
