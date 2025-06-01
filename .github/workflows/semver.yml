@@ -96,7 +96,7 @@ jobs:
             git diff
           fi
 
-      - name: Commit and push changes
+      - name: Commit and force push changes
         if: steps.check_changes.outputs.has_changes == 'true'
         run: |
           NEW_VERSION="${{ steps.calc_version.outputs.new_version }}"
@@ -104,4 +104,4 @@ jobs:
           git config --local user.name "GitHub Action"
           git add README.md app/main.py
           git commit -m "🔖 Bump version to $NEW_VERSION"
-          git push
+          git push --force
