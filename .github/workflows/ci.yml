@@ -4,9 +4,9 @@ on:
   # Trigger on pull requests to main branch
   pull_request:
     branches: [main]
-  # Trigger on pushes to main branch
-  push:
-    branches: [main]
+  # Removed push trigger to prevent duplicate runs when PRs are merged
+  # Allow manual trigger from GitHub Actions tab
+  workflow_dispatch:
 
 jobs:
   integration-tests:
