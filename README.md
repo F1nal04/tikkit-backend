@@ -1,3 +1,5 @@
+![Version](https://img.shields.io/badge/version-0.0.10-blue.svg)
+
 # Tikkit Backend
 
 A comprehensive REST API for managing IT support tickets built with FastAPI and SQLAlchemy. Features user authentication, role-based access control, and AI-powered ticket assistance.
