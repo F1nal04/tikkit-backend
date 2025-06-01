@@ -1,9 +1,9 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
-from . import database
+from .core import database
 from fastapi.security import OAuth2PasswordRequestForm
-from .security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
+from .core.security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
 from sqlalchemy.exc import IntegrityError
 from . import ai
 
