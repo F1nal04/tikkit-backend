@@ -3,11 +3,11 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 import jwt
 from argon2 import PasswordHasher, exceptions as argon2_exceptions
-from .schemas import Role
+from ..schemas import Role
 from sqlalchemy.orm import Session
 from .database import get_db
 from dotenv import load_dotenv
-from . import models
+from .. import models
 import os
 from uuid import UUID
 import string

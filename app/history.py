@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime, timezone
-from . import models, schemas
+from . import models
+from .schemas import enums
 import json
 
 
@@ -122,8 +123,8 @@ def record_ticket_assignment(db: Session, ticket_id: UUID, old_assigned_to: UUID
     db.add(history_entry)
 
 
-def record_ticket_status_change(db: Session, ticket_id: UUID, old_status: schemas.Status,
-                                new_status: schemas.Status, changed_by: UUID):
+def record_ticket_status_change(db: Session, ticket_id: UUID, old_status: enums.Status,
+                                new_status: enums.Status, changed_by: UUID):
     """Record ticket status changes."""
     history_entry = models.TicketHistory(
         ticket_id=ticket_id,
