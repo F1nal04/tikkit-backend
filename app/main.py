@@ -5,7 +5,7 @@ from .core import database
 from fastapi.security import OAuth2PasswordRequestForm
 from .core.security import get_current_active_user_optional, verify_password, create_access_token, get_password_hash, get_current_active_user, check_password_strength
 from sqlalchemy.exc import IntegrityError
-from . import ai
+from .services import ai
 
 from .schemas.enums import Role, Status, Priority, Topic
 from .schemas.auth import Token, PasswordChange, EmailChange, RoleChange
