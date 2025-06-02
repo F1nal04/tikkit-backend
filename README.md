@@ -4,7 +4,7 @@
 [![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-red.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-passing-brightgreen.svg)](#testing)
+[![tests](https://github.com/F1nal04/tikkit-backend/actions/workflows/ci.yml/badge.svg)](https://github.com/F1nal04/tikkit-backend/actions/workflows/ci.yml)
 
 > A modern REST API for IT support ticket management with AI-powered assistance
 
