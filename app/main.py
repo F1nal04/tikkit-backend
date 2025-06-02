@@ -12,7 +12,7 @@ Base.metadata.create_all(bind=database.engine)
 app = FastAPI(
     title="Ticket System API",
     description="A REST API for managing IT support tickets",
-    version="0.1.3",
+    version="0.1.4",
     openapi_tags=[
         {
             "name": "auth",
