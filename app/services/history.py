@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime, timezone
-from . import models
-from .schemas import enums
+from .. import models
+from ..schemas import enums
 import json
 
 

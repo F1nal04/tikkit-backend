@@ -1,11 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
 
 from ..core import database
 from ..core.security import get_current_active_user
 from ..schemas import TicketCreate, TicketPublic, TicketUpdate, Status, Priority, Topic, Role
-from .. import models, history
+from .. import models
+from ..services import history
 
 router = APIRouter(prefix="", tags=["ticket", "tickets"])
 
