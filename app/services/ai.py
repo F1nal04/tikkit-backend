@@ -1,3 +1,5 @@
+"""Helper functions for interacting with the OpenAI API."""
+
 from dotenv import load_dotenv
 import os
 from ..models import Ticket
@@ -21,6 +23,7 @@ if api_key:
 
 
 def generate_instructions(ticket: Ticket) -> str:
+    """Create system instructions for the AI model based on a ticket."""
     instructions = """
     You are an IT support specialist.
     The user is a person aged between 20 and 50 years old.
@@ -40,6 +43,7 @@ def generate_instructions(ticket: Ticket) -> str:
 
 
 def generate_prompt(ticket: Ticket) -> str:
+    """Build the prompt sent to the AI from ticket details."""
     prompt: str
     prompt = f"""I need help with the following technical issue:
     """
@@ -59,6 +63,7 @@ def generate_prompt(ticket: Ticket) -> str:
 
 
 def get_response(ticket: Ticket):
+    """Request a response from the OpenAI API for the provided ticket."""
     if not client:
         raise RuntimeError(
             "OpenAI client is not available. Please set OPENAI_KEY environment variable.")
@@ -74,7 +79,7 @@ def get_response(ticket: Ticket):
 
 
 def is_ai_available() -> bool:
-    """Check if AI functionality is available."""
+    """Return ``True`` when the OpenAI client is configured."""
     return client is not None
 
 

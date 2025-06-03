@@ -1,3 +1,5 @@
+"""SQLAlchemy session and engine configuration for the application."""
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 

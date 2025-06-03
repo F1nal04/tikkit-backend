@@ -1,3 +1,5 @@
+"""Authentication routes for registering users and obtaining tokens."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from fastapi.security import OAuth2PasswordRequestForm
@@ -13,6 +15,15 @@ router = APIRouter(prefix="", tags=["auth"])
 
 @router.post("/register", response_model=Token)
 async def register(user: UserCreate, db: Session = Depends(database.get_db)):
+    """Register a new user and return an access token.
+
+    Args:
+        user (UserCreate): Incoming user data.
+        db (Session): Database session.
+
+    Returns:
+        dict: Access token information.
+    """
     if not check_password_strength(user.password):
         raise HTTPException(
             status_code=400, detail="Password must be at least 8 characters long and contain at least one number and one special character.")
@@ -35,6 +46,16 @@ async def register(user: UserCreate, db: Session = Depends(database.get_db)):
 
 @router.post("/token", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(database.get_db)):
+    """Authenticate a user and return an access token.
+
+    Args:
+        form_data (OAuth2PasswordRequestForm): OAuth2 form containing email and
+            password.
+        db (Session): Database session.
+
+    Returns:
+        dict: Access token information.
+    """
     form_data.username = form_data.username.strip()
     form_data.username = form_data.username.lower()
     form_data.password = form_data.password.strip()

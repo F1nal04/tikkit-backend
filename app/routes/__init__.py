@@ -1,1 +1,1 @@
-# Router package initialization
+"""Route package exposing API routers."""

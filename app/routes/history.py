@@ -1,3 +1,5 @@
+"""Endpoints to view the change history of tickets."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -11,7 +13,15 @@ router = APIRouter(prefix="", tags=["history"])
 
 @router.get("/ticket/{ticket_id}/history", response_model=list[TicketHistoryPublic])
 async def get_ticket_history(ticket_id: UUID, db: Session = Depends(database.get_db)):
-    """Get the complete history of changes for a specific ticket."""
+    """Retrieve all history entries for a ticket.
+
+    Args:
+        ticket_id (UUID): Identifier of the ticket.
+        db (Session): Database session used for queries.
+
+    Returns:
+        list[TicketHistoryPublic]: Ordered list of history records.
+    """
     # Verify ticket exists
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
@@ -27,7 +37,15 @@ async def get_ticket_history(ticket_id: UUID, db: Session = Depends(database.get
 
 @router.get("/ticket/{ticket_id}/with-history", tags=["ticket"], response_model=TicketWithHistory)
 async def read_ticket_with_history(ticket_id: UUID, db: Session = Depends(database.get_db)):
-    """Get a ticket along with its complete change history."""
+    """Return ticket information together with its history.
+
+    Args:
+        ticket_id (UUID): Identifier of the ticket.
+        db (Session): Database session used to load ticket and history.
+
+    Returns:
+        TicketWithHistory: The ticket and its associated history entries.
+    """
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")

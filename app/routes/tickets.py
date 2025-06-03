@@ -1,3 +1,5 @@
+"""CRUD endpoints for managing support tickets."""
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -13,6 +15,16 @@ router = APIRouter(prefix="", tags=["ticket", "tickets"])
 
 @router.post("/ticket", tags=["ticket"], response_model=TicketPublic)
 async def create_ticket(ticket: TicketCreate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Create a new ticket and store it in the database.
+
+    Args:
+        ticket (TicketCreate): Ticket data from the request body.
+        current_user (models.User): User creating the ticket.
+        db (Session): Database session.
+
+    Returns:
+        models.Ticket: The created ticket.
+    """
     db_ticket = models.Ticket(**ticket.model_dump())
     db_ticket.author = current_user.id
     db.add(db_ticket)
@@ -28,6 +40,7 @@ async def create_ticket(ticket: TicketCreate, current_user: models.User = Depend
 
 @router.get("/ticket/{ticket_id}", tags=["ticket"], response_model=TicketPublic)
 async def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
+    """Return a ticket by its identifier."""
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -36,6 +49,17 @@ async def read_ticket(ticket_id: UUID, db: Session = Depends(database.get_db)):
 
 @router.put("/ticket/{ticket_id}", tags=["ticket"], response_model=TicketPublic)
 async def update_ticket(ticket_id: UUID, ticket: TicketUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Update a ticket and record the changes in history.
+
+    Args:
+        ticket_id (UUID): Identifier of the ticket to update.
+        ticket (TicketUpdate): Fields to update.
+        current_user (models.User): Authenticated admin performing the update.
+        db (Session): Database session.
+
+    Returns:
+        models.Ticket: The updated ticket.
+    """
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -72,6 +96,7 @@ async def update_ticket(ticket_id: UUID, ticket: TicketUpdate, current_user: mod
 
 @router.delete("/ticket/{ticket_id}", tags=["ticket"])
 async def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Delete a ticket and record the deletion in history."""
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -89,6 +114,7 @@ async def delete_ticket(ticket_id: UUID, current_user: models.User = Depends(get
 
 @router.put("/ticket/{ticket_id}/assign", tags=["ticket"], response_model=TicketPublic)
 async def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Assign a ticket to a user and record the change in history."""
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -109,6 +135,7 @@ async def assign_ticket(ticket_id: UUID, assigned_to: UUID, current_user: models
 
 @router.put("/ticket/{ticket_id}/status", tags=["ticket"], response_model=TicketPublic)
 async def update_ticket_status(ticket_id: UUID, status: Status, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Update the status of a ticket and log the change."""
     db_ticket = db.get(models.Ticket, ticket_id)
     if not db_ticket:
         raise HTTPException(status_code=404, detail="Ticket not found")
@@ -128,7 +155,17 @@ async def update_ticket_status(ticket_id: UUID, status: Status, current_user: mo
 
 
 @router.get("/tickets", tags=["tickets"], response_model=list[TicketPublic])
-async def read_tickets(skip: int = 0, limit: int = 100, status: Status = None, priority: Priority = None, assigned_to: UUID = None, author: UUID = None, topic: Topic = None,  db: Session = Depends(database.get_db)):
+async def read_tickets(
+    skip: int = 0,
+    limit: int = 100,
+    status: Status | None = None,
+    priority: Priority | None = None,
+    assigned_to: UUID | None = None,
+    author: UUID | None = None,
+    topic: Topic | None = None,
+    db: Session = Depends(database.get_db),
+):
+    """List tickets with optional filtering and pagination."""
     query = db.query(models.Ticket)
 
     if status:

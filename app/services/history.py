@@ -1,3 +1,5 @@
+"""Service utilities for recording and formatting ticket history."""
+
 from sqlalchemy.orm import Session
 from uuid import UUID
 from datetime import datetime, timezone

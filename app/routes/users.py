@@ -1,3 +1,5 @@
+"""Endpoints for managing users and their credentials."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from uuid import UUID
@@ -12,6 +14,7 @@ router = APIRouter(prefix="", tags=["user", "users"])
 
 @router.get("/user", tags=["user"], response_model=UserPublic)
 async def get_user(user_id: UUID | None = None,  current_user: models.User | None = Depends(get_current_active_user_optional), db: Session = Depends(database.get_db)):
+    """Retrieve a user either by ID or from the current session."""
     if not user_id:
         if not current_user:
             raise HTTPException(
@@ -26,6 +29,7 @@ async def get_user(user_id: UUID | None = None,  current_user: models.User | Non
 
 @router.put("/user/{user_id}", tags=["user"], response_model=UserPublic)
 async def update_user(user_id: UUID, user: UserUpdate, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Update user information."""
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -46,6 +50,7 @@ async def update_user(user_id: UUID, user: UserUpdate, current_user: models.User
 
 @router.delete("/user/{user_id}", tags=["user"])
 async def delete_user(user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Delete a user if no related tickets exist."""
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -78,6 +83,7 @@ async def delete_user(user_id: UUID, current_user: models.User = Depends(get_cur
 
 @router.put("/user/{user_id}/password", tags=["user"])
 async def change_password(password: PasswordChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Change a user's password."""
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -99,6 +105,7 @@ async def change_password(password: PasswordChange, user_id: UUID, current_user:
 
 @router.put("/user/{user_id}/email", tags=["user"], response_model=UserPublic)
 async def change_email(email: EmailChange, user_id: UUID, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Change a user's email address."""
     if not current_user.role == Role.admin:
         if not user_id == current_user.id:
             raise HTTPException(
@@ -121,6 +128,7 @@ async def change_email(email: EmailChange, user_id: UUID, current_user: models.U
 
 @router.put("/user/{user_id}/role", tags=["user"])
 async def change_role(user_id: UUID, role: RoleChange, current_user: models.User = Depends(get_current_active_user), db: Session = Depends(database.get_db)):
+    """Update the role of a user."""
     if not current_user.role == Role.admin:
         raise HTTPException(status_code=403, detail="Not enough permissions")
 
@@ -139,6 +147,7 @@ async def change_role(user_id: UUID, role: RoleChange, current_user: models.User
 
 @router.get("/users", tags=["users"], response_model=list[UserPublic])
 async def get_users(skip: int = 0, limit: int = 100, role: Role | None = None, db: Session = Depends(database.get_db)):
+    """List users with optional role filtering and pagination."""
     query = db.query(models.User)
     if role:
         query = query.filter(models.User.role == role)

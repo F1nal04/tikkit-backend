@@ -39,8 +39,8 @@ pip install -r requirements.txt
 Create `.env` file:
 
 ```env
-SECRET_KEY=your-secret-key-here
-OPENAI_API_KEY=your-openai-key  # Optional for AI features
+JWT_KEY=your-secret-key-here
+OPENAI_KEY=your-openai-key  # Optional for AI features
 ```
 
 ### 3. Run
