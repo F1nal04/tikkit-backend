@@ -1,6 +1,6 @@
 # Tikkit Backend
 
-[![Version](https://img.shields.io/badge/version-0.1.5-blue.svg)](https://github.com/your-repo/tikkit-backend)
+[![Version](https://img.shields.io/badge/version-0.1.6-blue.svg)](https://github.com/your-repo/tikkit-backend)
 [![Python](https://img.shields.io/badge/python-3.8+-green.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-red.svg)](https://fastapi.tiangolo.com)
 [![License](https://img.shields.io/badge/license-MIT-yellow.svg)](LICENSE)
