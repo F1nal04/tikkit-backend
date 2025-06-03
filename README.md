@@ -119,7 +119,3 @@ pytest tests/test_tickets.py -v
 ## 📄 License
 
 MIT License - see [LICENSE](LICENSE) file for details.
-
----
-
-**Need help?** Check the [full documentation](http://localhost:8000/docs) or [open an issue](https://github.com/your-repo/tikkit-backend/issues)
